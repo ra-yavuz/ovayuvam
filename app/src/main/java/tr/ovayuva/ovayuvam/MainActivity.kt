@@ -1,8 +1,10 @@
 package tr.ovayuva.ovayuvam
 
 import android.Manifest
+import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
@@ -13,7 +15,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -40,37 +42,50 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
+import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapLibreMapOptions
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import tr.ovayuva.ovayuvam.domain.GeoPosition
 import tr.ovayuva.ovayuvam.domain.VisitedCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.location.LocationTrailService
 import tr.ovayuva.ovayuvam.location.TrackingState
+import tr.ovayuva.ovayuvam.map.BasemapStyle
 import tr.ovayuva.ovayuvam.storage.VisitRepository
 import tr.ovayuva.ovayuvam.ui.theme.Fog
 import tr.ovayuva.ovayuvam.ui.theme.Forest
 import tr.ovayuva.ovayuvam.ui.theme.Ink
 import tr.ovayuva.ovayuvam.ui.theme.OvayuvamTheme
 import tr.ovayuva.ovayuvam.ui.theme.Paper
-import tr.ovayuva.ovayuvam.ui.theme.PaperDeep
-import tr.ovayuva.ovayuvam.ui.theme.Revealed
 import tr.ovayuva.ovayuvam.ui.theme.sketchSurface
-import kotlin.math.ceil
-import kotlin.math.floor
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
@@ -90,14 +105,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private const val InitialZoom = 1.1f
-private const val MinZoom = 0.07f
-private const val MaxZoom = 32f
-private const val RevealRadiusCells = 3.2f
+private const val InitialZoom = 15.6
+private const val RevealRadiusCells = 3.2
+private const val RevealRadiusMeters = WorldCell.DefaultCellSizeMeters * RevealRadiusCells
+private const val EarthRadiusMeters = 6_378_137.0
 
 private data class RevealMark(
     val cell: WorldCell,
     val point: Offset,
+    val radiusPx: Float,
     val samples: Int,
 )
 
@@ -107,6 +123,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     val trackingState = remember { TrackingState(context) }
     var cells by remember { mutableStateOf(repository.recentCells(4_000)) }
     var currentCell by remember { mutableStateOf(trackingState.currentCell()) }
+    var currentPosition by remember { mutableStateOf(trackingState.currentPosition()) }
     var tracking by remember { mutableStateOf(trackingState.isTracking()) }
     var status by remember { mutableStateOf("Revealing your world") }
     var infoOpen by remember { mutableStateOf(false) }
@@ -117,6 +134,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     fun refresh() {
         cells = repository.recentCells(4_000)
         currentCell = trackingState.currentCell()
+        currentPosition = trackingState.currentPosition()
         tracking = trackingState.isTracking()
     }
 
@@ -193,6 +211,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         FogWorldMap(
             cells = cells,
             currentCell = currentCell,
+            currentPosition = currentPosition,
             following = following,
             recenterRequest = recenterRequest,
             onUserMovedMap = { following = false },
@@ -216,32 +235,31 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 .padding(end = 12.dp, top = 12.dp),
         )
 
-        Column(
+        MapIconButton(
+            icon = R.drawable.art_recenter,
+            label = "Center map on me",
+            enabled = currentPosition != null || currentCell != null,
+            onClick = {
+                following = true
+                recenterRequest += 1
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
                 .padding(end = 12.dp, bottom = 12.dp),
-            horizontalAlignment = Alignment.End,
-        ) {
-            MapIconButton(
-                icon = R.drawable.art_recenter,
-                label = "Center map on me",
-                enabled = currentCell != null,
-                onClick = {
-                    following = true
-                    recenterRequest += 1
-                },
-            )
-        }
+        )
 
-        if (!tracking || currentCell == null || status != "Revealing your world") {
-            StatusPill(
-                text = if (!tracking) status else "Finding your place",
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .navigationBarsPadding()
-                    .padding(start = 12.dp, bottom = 12.dp, end = 84.dp),
-            )
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .navigationBarsPadding()
+                .padding(start = 12.dp, bottom = 12.dp, end = 84.dp),
+        ) {
+            if (!tracking || currentCell == null || status != "Revealing your world") {
+                StatusPill(text = if (!tracking) status else "Finding your place")
+                Spacer(Modifier.height(8.dp))
+            }
+            AttributionPill()
         }
     }
 }
@@ -296,6 +314,25 @@ private fun StatusPill(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun AttributionPill(modifier: Modifier = Modifier) {
+    Surface(
+        color = Color.Transparent,
+        modifier = modifier.sketchSurface(
+            fill = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+            border = MaterialTheme.colorScheme.outline.copy(alpha = 0.52f),
+            seed = 302,
+        ),
+    ) {
+        Text(
+            text = BasemapStyle.Attribution,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = Ink,
+        )
+    }
+}
+
+@Composable
 private fun MapIconButton(
     icon: Int,
     label: String,
@@ -336,11 +373,11 @@ private fun InfoDialog(tracking: Boolean, onDismiss: () -> Unit, onClear: () -> 
             Column {
                 Text("Your own world starts immediately after location permission is granted.")
                 Spacer(Modifier.height(10.dp))
-                Text("Visited places are stored as local map cells on this phone. The app has no internet permission, no account, no ads, and no backend.")
+                Text("The visible map uses OpenFreeMap tiles. Your revealed world is stored as local cells on this phone. There is no ovayuva account, no ads, and no ovayuva backend.")
                 Spacer(Modifier.height(10.dp))
                 Text(if (tracking) "Tracking is on and shown by a notification." else "Tracking is waiting for location access.")
                 Spacer(Modifier.height(10.dp))
-                Text("Impressum: Tangelo Bilisim Ltd. Contact: contact@tangelo.com.tr. No warranty is provided.")
+                Text("Map data: ${BasemapStyle.Attribution}. Impressum: Tangelo Bilisim Ltd. Contact: contact@tangelo.com.tr. No warranty is provided.")
             }
         },
         confirmButton = {
@@ -356,126 +393,199 @@ private fun InfoDialog(tracking: Boolean, onDismiss: () -> Unit, onClear: () -> 
 private fun FogWorldMap(
     cells: List<VisitedCell>,
     currentCell: WorldCell?,
+    currentPosition: GeoPosition?,
     following: Boolean,
     recenterRequest: Int,
     onUserMovedMap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var zoom by remember { mutableStateOf(InitialZoom) }
-    var pan by remember { mutableStateOf(Offset.Zero) }
-    val fallbackCenter = remember(cells) {
-        if (cells.isEmpty()) {
-            WorldCell(0, 0)
-        } else {
-            WorldCell(
-                x = ((cells.minOf { it.x } + cells.maxOf { it.x }) / 2f).roundToInt(),
-                y = ((cells.minOf { it.y } + cells.maxOf { it.y }) / 2f).roundToInt(),
-            )
-        }
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val initialPosition = remember(cells, currentCell, currentPosition) {
+        currentPosition ?: currentCell?.centerPosition() ?: fallbackPosition(cells)
     }
-    val center = if (following) currentCell ?: fallbackCenter else fallbackCenter
+    var activeMap by remember { mutableStateOf<MapLibreMap?>(null) }
+    var cameraTick by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(recenterRequest, currentCell) {
+    LaunchedEffect(activeMap, following, currentPosition, currentCell, recenterRequest) {
+        val map = activeMap ?: return@LaunchedEffect
+        val target = currentPosition ?: currentCell?.centerPosition() ?: return@LaunchedEffect
         if (following) {
-            pan = Offset.Zero
-            zoom = InitialZoom
+            val zoom = max(map.cameraPosition.zoom, InitialZoom)
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), zoom), 650)
         }
     }
 
-    Canvas(
-        modifier = modifier.pointerInput(Unit) {
-            detectTransformGestures { _, panChange, zoomChange, _ ->
-                if (panChange != Offset.Zero || zoomChange != 1f) onUserMovedMap()
-                pan += panChange
-                zoom = (zoom * zoomChange).coerceIn(MinZoom, MaxZoom)
+    Box(modifier) {
+        val mapView = remember {
+            MapLibre.getInstance(context)
+            MapView(
+                context,
+                MapLibreMapOptions.createFromAttributes(context)
+                    .textureMode(true)
+                    .foregroundLoadColor(android.graphics.Color.rgb(243, 244, 237)),
+            ).apply {
+                setBackgroundColor(android.graphics.Color.rgb(243, 244, 237))
+                onCreate(null)
+                setMaximumFps(30)
+                getMapAsync { map ->
+                    map.uiSettings.apply {
+                        isScrollGesturesEnabled = true
+                        isZoomGesturesEnabled = true
+                        isDoubleTapGesturesEnabled = true
+                        isRotateGesturesEnabled = false
+                        isTiltGesturesEnabled = false
+                        isCompassEnabled = false
+                        isLogoEnabled = false
+                        isAttributionEnabled = false
+                    }
+                    map.setMinZoomPreference(0.0)
+                    map.setMaxZoomPreference(22.0)
+                    map.cameraPosition = CameraPosition.Builder()
+                        .target(initialPosition.toLatLng())
+                        .zoom(InitialZoom)
+                        .build()
+                    map.addOnCameraMoveStartedListener { reason ->
+                        if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
+                            onUserMovedMap()
+                        }
+                    }
+                    map.addOnCameraMoveListener { cameraTick += 1 }
+                    map.addOnCameraIdleListener { cameraTick += 1 }
+                    map.setStyle(Style.Builder().fromJson(BasemapStyle.json())) {
+                        cameraTick += 1
+                    }
+                    activeMap = map
+                }
             }
-        },
-    ) {
-        drawPaperMap(center, pan, zoom)
-        drawRect(Fog)
-        drawRevealedCells(cells, currentCell, center, pan, zoom)
-        currentCell?.let { drawCurrentDot(it, center, pan, zoom) }
-    }
-}
+        }
 
-private fun DrawScope.drawPaperMap(center: WorldCell, pan: Offset, zoom: Float) {
-    drawRect(Paper)
-    val cellPx = cellPixels(zoom)
-    val minX = floor((-pan.x - size.width * 0.65f) / cellPx + center.x).toInt()
-    val maxX = ceil((-pan.x + size.width * 0.65f) / cellPx + center.x).toInt()
-    val minY = floor((pan.y - size.height * 0.65f) / cellPx + center.y).toInt()
-    val maxY = ceil((pan.y + size.height * 0.65f) / cellPx + center.y).toInt()
+        AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
+        FogRevealOverlay(
+            cells = cells,
+            currentCell = currentCell,
+            currentPosition = currentPosition,
+            map = activeMap,
+            cameraTick = cameraTick,
+            modifier = Modifier.fillMaxSize(),
+        )
 
-    val verticalStep = max(7, ceil(44f / cellPx).toInt())
-    val horizontalStep = max(6, ceil(40f / cellPx).toInt())
-    val detailStepX = max(11, ceil(72f / cellPx).toInt())
-    val detailStepY = max(9, ceil(64f / cellPx).toInt())
-
-    for (x in minX..maxX step verticalStep) {
-        val p1 = cellToScreen(x, minY, center, pan, cellPx)
-        val p2 = cellToScreen(x + wobble(x, minY, 2), maxY, center, pan, cellPx)
-        drawLine(Color(0xFFBAC6BD).copy(alpha = 0.38f), p1, p2, 2.2f)
-    }
-    for (y in minY..maxY step horizontalStep) {
-        val p1 = cellToScreen(minX, y + wobble(minX, y, 3), center, pan, cellPx)
-        val p2 = cellToScreen(maxX, y, center, pan, cellPx)
-        drawLine(Color(0xFF97B0A1).copy(alpha = 0.28f), p1, p2, 1.7f)
-    }
-    for (x in minX..maxX step detailStepX) {
-        for (y in minY..maxY step detailStepY) {
-            if (noise(x, y) > 0.58f) {
-                val topLeft = cellToScreen(x, y, center, pan, cellPx)
-                drawOval(
-                    color = PaperDeep.copy(alpha = 0.32f),
-                    topLeft = topLeft,
-                    size = Size(cellPx * (2.5f + noise(y, x)), cellPx * (1.5f + noise(x + 4, y))),
-                )
+        DisposableEffect(mapView, lifecycle) {
+            var started = false
+            var resumed = false
+            fun release() {
+                if (!mapView.isDestroyed) {
+                    if (resumed) mapView.onPause()
+                    if (started) mapView.onStop()
+                    resumed = false
+                    started = false
+                    activeMap = null
+                    mapView.onDestroy()
+                }
+            }
+            val observer = LifecycleEventObserver { _, event ->
+                if (!mapView.isDestroyed) {
+                    when (event) {
+                        Lifecycle.Event.ON_START -> {
+                            mapView.onStart()
+                            started = true
+                        }
+                        Lifecycle.Event.ON_RESUME -> {
+                            mapView.onResume()
+                            resumed = true
+                        }
+                        Lifecycle.Event.ON_PAUSE -> {
+                            mapView.onPause()
+                            resumed = false
+                        }
+                        Lifecycle.Event.ON_STOP -> {
+                            mapView.onStop()
+                            started = false
+                        }
+                        Lifecycle.Event.ON_DESTROY -> release()
+                        else -> Unit
+                    }
+                }
+            }
+            @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+            val memory = object : ComponentCallbacks2 {
+                override fun onConfigurationChanged(newConfig: Configuration) = Unit
+                override fun onLowMemory() {
+                    if (!mapView.isDestroyed) mapView.onLowMemory()
+                }
+                override fun onTrimMemory(level: Int) {
+                    if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) onLowMemory()
+                }
+            }
+            context.applicationContext.registerComponentCallbacks(memory)
+            lifecycle.addObserver(observer)
+            onDispose {
+                lifecycle.removeObserver(observer)
+                context.applicationContext.unregisterComponentCallbacks(memory)
+                release()
             }
         }
     }
 }
 
-private fun DrawScope.drawRevealedCells(
+@Composable
+private fun FogRevealOverlay(
     cells: List<VisitedCell>,
     currentCell: WorldCell?,
-    center: WorldCell,
-    pan: Offset,
-    zoom: Float,
+    currentPosition: GeoPosition?,
+    map: MapLibreMap?,
+    cameraTick: Int,
+    modifier: Modifier = Modifier,
 ) {
-    val cellPx = cellPixels(zoom)
+    Canvas(
+        modifier = modifier.graphicsLayer {
+            compositingStrategy = CompositingStrategy.Offscreen
+        },
+    ) {
+        cameraTick
+        drawRect(Fog)
+        if (map != null) {
+            drawRevealedPlaces(map, cells, currentCell)
+            currentPosition?.let { drawCurrentDot(map, it) }
+        }
+    }
+}
+
+private fun DrawScope.drawRevealedPlaces(
+    map: MapLibreMap,
+    cells: List<VisitedCell>,
+    currentCell: WorldCell?,
+) {
     val revealed = linkedMapOf<Pair<Int, Int>, Int>()
     cells.forEach { revealed[it.x to it.y] = it.samples }
     currentCell?.let { revealed[it.x to it.y] = max(revealed[it.x to it.y] ?: 1, 3) }
-    val brushRadius = cellPx * RevealRadiusCells
     val canvasWidth = size.width
     val canvasHeight = size.height
     val visible = buildList {
         revealed.forEach { entry ->
             val cell = WorldCell(entry.key.first, entry.key.second)
-            val point = cellToScreen(cell.x, cell.y, center, pan, cellPx)
+            val position = cell.centerPosition()
+            val point = map.projection.toScreenLocation(position.toLatLng())
+            val center = Offset(point.x, point.y)
+            val radius = revealRadiusPixels(map, position)
             if (
-                point.x + brushRadius >= 0f &&
-                point.y + brushRadius >= 0f &&
-                point.x - brushRadius <= canvasWidth &&
-                point.y - brushRadius <= canvasHeight
+                center.x + radius >= 0f &&
+                center.y + radius >= 0f &&
+                center.x - radius <= canvasWidth &&
+                center.y - radius <= canvasHeight
             ) {
-                add(RevealMark(cell, point, entry.value))
+                add(RevealMark(cell, center, radius, entry.value))
             }
         }
     }
-
-    visible.forEach { mark ->
-        drawRevealBrush(mark, brushRadius)
-    }
-    visible.forEach { mark ->
-        drawRevealInk(mark, brushRadius)
-    }
+    visible.forEach(::drawRevealBrush)
 }
 
-private fun DrawScope.drawRevealBrush(mark: RevealMark, radius: Float) {
+private fun DrawScope.drawRevealBrush(mark: RevealMark) {
     val x = mark.cell.x
     val y = mark.cell.y
-    val strength = (0.82f + mark.samples.coerceAtMost(8) * 0.02f).coerceAtMost(0.96f)
+    val radius = mark.radiusPx
+    val strength = (0.64f + mark.samples.coerceAtMost(8) * 0.035f).coerceAtMost(0.92f)
     val offsets = listOf(
         Offset(-0.32f, -0.08f),
         Offset(0.28f, -0.18f),
@@ -483,86 +593,73 @@ private fun DrawScope.drawRevealBrush(mark: RevealMark, radius: Float) {
         Offset(0.34f, 0.18f),
         Offset(0.04f, -0.36f),
     )
+    drawCircle(
+        color = Color.Black.copy(alpha = 0.32f),
+        radius = radius * 1.2f,
+        center = mark.point,
+        blendMode = BlendMode.DstOut,
+    )
     offsets.forEachIndexed { index, offset ->
-        val roughRadius = radius * (0.62f + noise(x + index * 11, y - index * 7) * 0.28f)
+        val roughRadius = radius * (0.58f + noise(x + index * 11, y - index * 7) * 0.28f)
         drawCircle(
-            color = Revealed.copy(alpha = 0.14f),
+            color = Color.Black.copy(alpha = 0.34f),
             radius = roughRadius,
             center = mark.point + Offset(offset.x * radius, offset.y * radius),
+            blendMode = BlendMode.DstOut,
         )
     }
     drawCircle(
-        color = Revealed.copy(alpha = 0.22f),
-        radius = radius * 1.05f,
+        color = Color.Black.copy(alpha = strength),
+        radius = radius * 0.86f,
         center = mark.point,
+        blendMode = BlendMode.DstOut,
     )
     drawCircle(
-        color = Paper.copy(alpha = strength),
-        radius = radius * 0.9f,
+        color = Color.Black,
+        radius = radius * 0.56f,
         center = mark.point,
-    )
-    drawCircle(
-        color = Color.White.copy(alpha = 0.10f),
-        radius = radius * 0.48f,
-        center = mark.point + Offset(radius * 0.08f, -radius * 0.05f),
+        blendMode = BlendMode.Clear,
     )
 }
 
-private fun DrawScope.drawRevealInk(mark: RevealMark, radius: Float) {
-    val x = mark.cell.x
-    val y = mark.cell.y
-    val road = Color(0xFF536F61).copy(alpha = 0.46f)
-    val water = Color(0xFF78B7BE).copy(alpha = 0.24f)
-    val center = mark.point
-    val strokeWidth = (radius * 0.018f).coerceIn(1.1f, 4.8f)
-    val path = Path().apply {
-        moveTo(center.x - radius * 0.82f, center.y + radius * (-0.22f + noise(x, y) * 0.38f))
-        cubicTo(
-            center.x - radius * 0.32f,
-            center.y - radius * (0.46f + noise(y, x) * 0.12f),
-            center.x + radius * 0.28f,
-            center.y + radius * (0.24f + noise(x + 2, y) * 0.12f),
-            center.x + radius * 0.82f,
-            center.y + radius * (-0.12f + noise(x, y + 2) * 0.36f),
-        )
-    }
-    drawPath(path, road, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth))
-    if (noise(x + 9, y - 3) > 0.72f) {
-        drawOval(
-            color = water,
-            topLeft = center + Offset(-radius * 0.24f, radius * 0.12f),
-            size = Size(radius * 0.54f, radius * 0.22f),
-        )
-    }
-}
-
-private fun DrawScope.drawCurrentDot(cell: WorldCell, center: WorldCell, pan: Offset, zoom: Float) {
-    val point = cellToScreen(cell.x, cell.y, center, pan, cellPixels(zoom))
+private fun DrawScope.drawCurrentDot(map: MapLibreMap, position: GeoPosition) {
+    val screen = map.projection.toScreenLocation(position.toLatLng())
+    val point = Offset(screen.x, screen.y)
     drawCircle(Color(0x552E6FF2), 22.dp.toPx(), point)
     drawCircle(Color.White, 10.dp.toPx(), point)
     drawCircle(Color(0xFF2E6FF2), 6.dp.toPx(), point)
-    drawCircle(Color(0xFF3A2E1E), 10.dp.toPx(), point, style = androidx.compose.ui.graphics.drawscope.Stroke(1.4.dp.toPx()))
+    drawCircle(Color(0xFF3A2E1E), 10.dp.toPx(), point, style = Stroke(1.4.dp.toPx()))
 }
 
-private fun cellPixels(zoom: Float): Float = 22f * zoom
+private fun revealRadiusPixels(map: MapLibreMap, position: GeoPosition): Float {
+    val center = map.projection.toScreenLocation(position.toLatLng())
+    val edge = map.projection.toScreenLocation(position.offsetEast(RevealRadiusMeters).toLatLng())
+    return hypot((edge.x - center.x).toDouble(), (edge.y - center.y).toDouble())
+        .toFloat()
+        .coerceAtLeast(1f)
+}
 
-private fun DrawScope.cellToScreen(
-    x: Int,
-    y: Int,
-    center: WorldCell,
-    pan: Offset,
-    cellPx: Float,
-): Offset = Offset(
-    x = size.width / 2f + (x - center.x) * cellPx + pan.x,
-    y = size.height / 2f + (center.y - y) * cellPx + pan.y,
-)
+private fun fallbackPosition(cells: List<VisitedCell>): GeoPosition {
+    if (cells.isEmpty()) return GeoPosition(latitude = 41.0082, longitude = 28.9784)
+    return WorldCell(
+        x = ((cells.minOf { it.x } + cells.maxOf { it.x }) / 2f).roundToInt(),
+        y = ((cells.minOf { it.y } + cells.maxOf { it.y }) / 2f).roundToInt(),
+    ).centerPosition()
+}
+
+private fun GeoPosition.toLatLng(): LatLng = LatLng(latitude, longitude)
+
+private fun GeoPosition.offsetEast(meters: Double): GeoPosition {
+    val metersPerDegree = max(1.0, (PI / 180.0) * EarthRadiusMeters * cos(latitude.toRadians()))
+    return copy(longitude = (longitude + meters / metersPerDegree).coerceIn(-180.0, 180.0))
+}
 
 private fun noise(x: Int, y: Int): Float {
     val mixed = (x * 73856093) xor (y * 19349663)
     return (mixed and 0xFFFF) / 65535f
 }
 
-private fun wobble(x: Int, y: Int, salt: Int): Int = ((noise(x + salt, y - salt) - 0.5f) * 4f).roundToInt()
+private fun Double.toRadians(): Double = this * PI / 180.0
 
 private fun requiredPermissions(): Array<String> = buildList {
     add(Manifest.permission.ACCESS_FINE_LOCATION)

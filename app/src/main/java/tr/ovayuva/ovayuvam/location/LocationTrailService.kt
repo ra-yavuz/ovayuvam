@@ -71,7 +71,7 @@ class LocationTrailService : Service() {
             override fun onLocationChanged(location: Location) {
                 val cell = WorldCell.fromLocation(location.latitude, location.longitude)
                 repository.recordVisitArea(cell, System.currentTimeMillis(), radiusCells = 2)
-                trackingState.setCurrentCell(cell)
+                trackingState.setCurrentLocation(location.latitude, location.longitude, cell)
             }
 
             override fun onProviderDisabled(provider: String) = Unit

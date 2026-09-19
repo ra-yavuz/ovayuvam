@@ -17,8 +17,11 @@ The app does not record:
 - Server account IDs.
 - Friend lists.
 - Public posts.
-- Remote map tile requests.
 - Backend sync records.
+
+The app does request OpenFreeMap/OpenStreetMap map tiles so it can show a real
+street map. Those tile requests are separate from the local revealed-world data,
+but they can still expose the rough map area being viewed to the tile provider.
 
 ## Sensitive data warning
 
@@ -29,7 +32,7 @@ raw GPS points.
 ## Backup
 
 Android automatic backup and device transfer are disabled in version 1. Version
-0.3.1 has no export, import, account, backend, or sync feature.
+0.4.0 has no export, import, account, backend, or sync feature.
 
 A later backup feature can use the user's Google Drive only after a clear opt-in.
 The backup should be encrypted on the device before upload. The app should not hold
@@ -43,7 +46,7 @@ visible after someone leaves a group.
 
 ## Delete
 
-Version 0.3.1 includes a local clear action in the info sheet. It removes every
+Version 0.4.0 includes a local clear action in the info sheet. It removes every
 visited cell stored by ovayuvam on the device.
 
 ## No warranty

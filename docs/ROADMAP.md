@@ -5,7 +5,8 @@
 - Local-only Android app.
 - No backend.
 - No account.
-- No `INTERNET` permission.
+- Real MapLibre/OpenFreeMap basemap.
+- Internet permission only for map tiles.
 - Automatic visible location tracking after permission is granted.
 - Fog-grid storage in SQLite.
 - Full-screen local fog map with circular reveal trails and wide zoom.
@@ -21,7 +22,7 @@
 - Manual encrypted import.
 - Wrong-key and damaged-backup checks.
 
-## Phase 3: better map
+## Phase 3: offline map
 
 - Offline-friendly base map research.
 - Clear attribution.

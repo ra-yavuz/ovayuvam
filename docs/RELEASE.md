@@ -2,11 +2,11 @@
 
 ## Current release
 
-- Version: `0.3.1`
+- Version: `0.4.0`
 - Package: `tr.ovayuva.ovayuvam`
-- APK: `ovayuvam-0.3.1.apk`
-- Size: `1,657,262` bytes
-- SHA-256: `a9a20543a51e712fbf6e6a3ca76afee954e25c3042f164ae4fd1f69de7d0989f`
+- APK: `ovayuvam-0.4.0.apk`
+- Size: `44,358,823` bytes
+- SHA-256: `8d4ad2426c3ac57a7f7bb0f82d886fa7baf40aaba909fd93b33d4cb75b1cabef`
 - Signing certificate SHA-256: `41a682a94ae3098fb09bf3e984be9c591f3093329618d057a59b3f922719873e`
 
 ## Verified
@@ -14,11 +14,13 @@
 - Clean release build passed with `./gradlew clean testDebugUnitTest assembleRelease`.
 - Android release lint passed.
 - APK signature verification passed.
-- APK declares no `android.permission.INTERNET`.
-- APK version is `versionCode=4` and `versionName=0.3.1`.
-- APK asks only for location, foreground-service, notification, and AndroidX internal receiver permissions.
+- APK version is `versionCode=5` and `versionName=0.4.0`.
+- APK asks for internet and network-state permissions for OpenFreeMap/OpenStreetMap map tiles.
+- APK asks for location, foreground-service, notification, and AndroidX internal receiver permissions.
+- APK does not declare `android.permission.ACCESS_WIFI_STATE`.
 - Android automatic backup is disabled in the manifest and backup rule files.
-- The reveal view uses a circular paintbrush-style radius, not square visual chunks.
+- The map view uses MapLibre with OpenFreeMap vector tiles.
+- The reveal view uses a circular paintbrush-style radius over the real map, not square visual chunks.
 - Map zoom supports a wide inspection range while keeping the reveal radius tied to world cells.
 
 ## V1 boundary
@@ -26,12 +28,13 @@
 This is production-ready as a local-first sideloaded v1. It is not yet a Play
 Store-reviewed release.
 
-The app opens directly to a full-screen local fog map. It does not fetch remote map
-tiles and does not show a full street or satellite basemap. On launch, it requests
-the needed permissions and starts visible location tracking as soon as permission
-and Android Location are available.
+The app opens directly to a full-screen real street map with a fog overlay. The
+basemap loads from OpenFreeMap/OpenStreetMap over the internet. Revealed places
+are stored locally as grid cells on the phone. On launch, it requests the needed
+permissions and starts visible location tracking as soon as permission and Android
+Location are available.
 
-There is no export or import UI in version 0.3.1. Later backup work must be an
+There is no export or import UI in version 0.4.0. Later backup work must be an
 explicit product decision.
 
 ## Not included yet
@@ -52,8 +55,12 @@ fine location permission before the service starts. See Android foreground servi
 types: https://developer.android.com/develop/background-work/services/fgs/service-types
 
 Android 10 and newer use `ACCESS_BACKGROUND_LOCATION` for background location
-access. This app does not declare that permission in version 0.3.1. See Android
+access. This app does not declare that permission in version 0.4.0. See Android
 location permissions: https://developer.android.com/develop/sensors-and-location/location/permissions
+
+Real map tiles require network access. The app uses OpenFreeMap/OpenMapTiles/
+OpenStreetMap data for the visible basemap. Map tile requests may reveal the
+rough area being viewed to the tile provider, separate from the local fog data.
 
 Google Play has extra review requirements for background location. Any Play Store
 submission must treat this as separate policy work. See Google Play background

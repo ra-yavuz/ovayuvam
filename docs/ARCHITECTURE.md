@@ -1,11 +1,11 @@
 # Architecture
 
 ovayuvam starts as a local Android app. The first release has no backend and no
-runtime internet permission.
+ovayuva account. It uses internet access only for the real basemap.
 
 ## Runtime pieces
 
-- `MainActivity`: full-screen Compose fog map for the private world.
+- `MainActivity`: full-screen MapLibre map with a Compose fog overlay for the private world.
 - `LocationTrailService`: visible foreground service that records GPS fixes while
   the app is revealing the world.
 - `TrackingState`: small shared-preferences flag used by the UI to reflect whether
@@ -19,22 +19,20 @@ The local database stores grid cells, first seen time, last seen time, and sampl
 count. It does not store raw route uploads. This still counts as sensitive
 location history because repeated cells can reveal routines.
 
-Android cloud backup and device transfer are disabled for version 1. Version 0.3.1
+Android cloud backup and device transfer are disabled for version 1. Version 0.4.0
 does not include export or import UI. Later Google Drive backup should be explicit,
 encrypted, user-started, and restorable without an ovayuva server.
 
 ## Map approach
 
-Version 1 draws a local full-screen fog map. It starts with a parchment-like map
-that is darkened by fog, then clears a soft circular radius as the user walks.
-The visible trail is meant to feel like brushing fog from paper, not like square
-tile chunks. It does not request remote map tiles. A later map layer can be added
-only after map licensing, provider privacy, offline behavior, and attribution are
-handled.
+Version 0.4.0 uses MapLibre with OpenFreeMap vector tiles styled in the Ovayuva
+paper-and-ink direction. A fog overlay sits above the real map and clears a soft
+circular radius as the user walks. The visible trail is meant to feel like brushing
+fog from paper, not like square tile chunks.
 
-The app has no runtime `INTERNET` permission. The map works without app network
-access because the first version is not a real basemap. It is a local drawing of
-visited grid cells.
+The map tile provider can see tile requests for the viewed area. The app does not
+send revealed cells, routes, accounts, or friend data to an ovayuva backend.
+Offline map packs remain future work.
 
 ## Sharing approach
 

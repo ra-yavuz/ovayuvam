@@ -3,8 +3,8 @@
 > A private, local-first Android map that slowly reveals the places you have been.
 
 ovayuvam is a small open source companion project for the ovayuva family. The first
-version is "my own world" only: no backend, no accounts, no social graph, no ads,
-and no runtime `INTERNET` permission.
+version is "my own world" only: no ovayuva backend, no accounts, no social graph,
+and no ads. The real map uses OpenFreeMap/OpenStreetMap tiles over the internet.
 
 The app opens directly to a full-screen fog map. On launch it asks for the needed
 location permission and starts revealing walked places as soon as permission and
@@ -18,7 +18,8 @@ contains:
 
 - A standalone Android project under `app/`.
 - A local SQLite store for visited fog-grid cells.
-- A full-screen Compose fog map that draws soft circular reveal trails without remote map tiles.
+- A full-screen MapLibre map with Ovayuva-style paper-and-ink OpenFreeMap tiles.
+- A fog overlay that clears soft circular reveal trails over the real map.
 - Automatic visible location tracking after permission is granted.
 - A small info sheet with privacy, contact, and local-clear controls.
 - Ovayuva-style hand-drawn colors, fonts, and map controls.
@@ -27,13 +28,13 @@ contains:
 
 ## Download
 
-Current APK release: `0.3.1`.
+Current APK release: `0.4.0`.
 
-- Download: [ovayuvam-0.3.1.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.3.1/ovayuvam-0.3.1.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.3.1.apk](https://ovayuva.tr/yuvam/ovayuvam-0.3.1.apk)
+- Download: [ovayuvam-0.4.0.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.4.0/ovayuvam-0.4.0.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.4.0.apk](https://ovayuva.tr/yuvam/ovayuvam-0.4.0.apk)
 - Package: `tr.ovayuva.ovayuvam`
-- Size: `1,657,262` bytes
-- SHA-256: `a9a20543a51e712fbf6e6a3ca76afee954e25c3042f164ae4fd1f69de7d0989f`
+- Size: `44,358,823` bytes
+- SHA-256: `8d4ad2426c3ac57a7f7bb0f82d886fa7baf40aaba909fd93b33d4cb75b1cabef`
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent
@@ -47,7 +48,7 @@ from there.
 - No server-side account.
 - No friend groups.
 - No shared world upload.
-- No remote map tile provider.
+- No ovayuva map backend. The basemap is loaded from OpenFreeMap/OpenStreetMap.
 - No export or import UI in this simple first map release.
 - No automatic Google Drive upload.
 - No Play Store listing or Play policy review yet.
