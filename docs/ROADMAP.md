@@ -6,11 +6,9 @@
 - No backend.
 - No account.
 - No `INTERNET` permission.
-- Visible location tracking session.
+- Automatic visible location tracking after permission is granted.
 - Fog-grid storage in SQLite.
-- Simple local world view.
-- Manual JSON export.
-- Manual JSON import.
+- Full-screen local fog map.
 - Local delete.
 - Public page at `ovayuva.tr/yuvam/`.
 

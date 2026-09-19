@@ -6,9 +6,10 @@ ovayuvam is a small open source companion project for the ovayuva family. The fi
 version is "my own world" only: no backend, no accounts, no social graph, no ads,
 and no runtime `INTERNET` permission.
 
-The app stores visited map cells on the device. A visible location tracking session
-can keep adding cells while the app is not on screen, using a foreground service and
-a persistent notification. Hidden tracking is not a goal.
+The app opens directly to a full-screen fog map. On launch it asks for the needed
+location permission and starts revealing walked places as soon as permission and
+Android Location are available. Tracking is visible through a foreground service
+notification. Hidden tracking is not a goal.
 
 ## Status
 
@@ -17,21 +18,22 @@ contains:
 
 - A standalone Android project under `app/`.
 - A local SQLite store for visited fog-grid cells.
-- A simple Compose screen that draws revealed cells without remote map tiles.
-- A visible location tracking service.
-- Manual private-world JSON export, import, and local delete controls.
+- A full-screen Compose fog map that draws revealed cells without remote map tiles.
+- Automatic visible location tracking after permission is granted.
+- A small info sheet with privacy, contact, and local-clear controls.
+- Ovayuva-style hand-drawn colors, fonts, and map controls.
 - A draft public page for `https://ovayuva.tr/yuvam/` under `web/yuvam/`.
 - Product, privacy, architecture, and roadmap notes under `docs/`.
 
 ## Download
 
-Current APK release: `0.2.0`.
+Current APK release: `0.3.0`.
 
-- Download: [ovayuvam-0.2.0.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.2.0/ovayuvam-0.2.0.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.2.0.apk](https://ovayuva.tr/yuvam/ovayuvam-0.2.0.apk)
+- Download: [ovayuvam-0.3.0.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.3.0/ovayuvam-0.3.0.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.3.0.apk](https://ovayuva.tr/yuvam/ovayuvam-0.3.0.apk)
 - Package: `tr.ovayuva.ovayuvam`
-- Size: `1,347,297` bytes
-- SHA-256: `23533dadc5a9e7f5405cfff5d64032797ea290779f023f618872d187db71b2d5`
+- Size: `1,657,258` bytes
+- SHA-256: `182a9cc8e6d2157c1af430e84dc3d1358fbd2c535d87ea85f65ddf0fea476958`
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent
@@ -46,6 +48,7 @@ from there.
 - No friend groups.
 - No shared world upload.
 - No remote map tile provider.
+- No export or import UI in this simple first map release.
 - No automatic Google Drive upload.
 - No Play Store listing or Play policy review yet.
 
@@ -67,9 +70,9 @@ builds without installing the toolchain on your machine.
 
 ## Safety and privacy
 
-ovayuvam records location-derived cells. Even if raw coordinates are not exported,
-visited cells can still reveal sensitive routines. Keep exports encrypted. Do not
-use the app for safety, emergency, navigation, legal proof, or important records.
+ovayuvam records location-derived cells. Visited cells can reveal sensitive
+routines. Do not use the app for safety, emergency, navigation, legal proof, or
+important records.
 
 No warranty is provided. You use this software at your own risk. You are responsible
 for checking local laws, platform rules, map-data rules, and safety conditions before

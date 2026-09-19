@@ -1,0 +1,16 @@
+<!-- The user's own location: hand-drawn ink-ringed blue dot (sketch style, D36). Symmetric
+     28x28, center-anchored. KEEP the canvas centered. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="28"
+    android:viewportHeight="28">
+    <!-- accuracy halo -->
+    <path android:fillColor="#332E6FF2" android:pathData="M14,14 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0" />
+    <!-- hand-drawn white disc with ink ring -->
+    <path android:fillColor="#FFFFFFFF" android:strokeColor="#FF3A2E1E" android:strokeWidth="1.8"
+        android:pathData="M14,6.1 C18.6,5.8 22.3,9.5 22.1,13.9 C21.9,18.5 18.4,22 13.9,21.9 C9.5,21.8 6,18.2 6.1,13.7 C6.2,9.6 9.7,6.4 14,6.1 Z" />
+    <!-- blue core, slightly wobbly -->
+    <path android:fillColor="#FF2E6FF2"
+        android:pathData="M14,9.6 C16.7,9.5 18.6,11.6 18.5,14 C18.4,16.6 16.4,18.5 13.9,18.4 C11.5,18.3 9.6,16.4 9.7,13.9 C9.8,11.6 11.7,9.7 14,9.6 Z" />
+</vector>

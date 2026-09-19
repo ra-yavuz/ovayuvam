@@ -41,21 +41,13 @@ class LocationTrailService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_STOP -> {
-                stopTracking()
-                stopSelf()
-            }
-            else -> {
-                if (!canTrackLocation()) {
-                    trackingState.setTracking(false)
-                    stopSelf()
-                    return START_NOT_STICKY
-                }
-                startAsForegroundLocationService()
-                startTracking()
-            }
+        if (!canTrackLocation()) {
+            trackingState.setTracking(false)
+            stopSelf()
+            return START_NOT_STICKY
         }
+        startAsForegroundLocationService()
+        startTracking()
         return START_STICKY
     }
 
@@ -79,6 +71,7 @@ class LocationTrailService : Service() {
             override fun onLocationChanged(location: Location) {
                 val cell = WorldCell.fromLocation(location.latitude, location.longitude)
                 repository.record(cell, System.currentTimeMillis())
+                trackingState.setCurrentCell(cell)
             }
 
             override fun onProviderDisabled(provider: String) = Unit
@@ -179,37 +172,23 @@ class LocationTrailService : Service() {
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val stopIntent = PendingIntent.getService(
-            this,
-            1,
-            Intent(this, LocationTrailService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_monochrome)
+            .setSmallIcon(R.drawable.ic_stat_map)
             .setContentTitle(getString(R.string.tracking_notification_title))
             .setContentText(getString(R.string.tracking_notification_text))
             .setContentIntent(openIntent)
             .setOngoing(true)
-            .addAction(R.drawable.ic_launcher_monochrome, "Stop", stopIntent)
             .build()
     }
 
     companion object {
         private const val CHANNEL_ID = "location-tracking"
         private const val NOTIFICATION_ID = 1001
-        private const val ACTION_STOP = "tr.ovayuva.ovayuvam.STOP"
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(
                 context,
                 Intent(context, LocationTrailService::class.java),
-            )
-        }
-
-        fun stop(context: Context) {
-            context.startService(
-                Intent(context, LocationTrailService::class.java).setAction(ACTION_STOP),
             )
         }
     }

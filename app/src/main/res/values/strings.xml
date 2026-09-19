@@ -3,5 +3,5 @@
     <string name="app_name">ovayuvam</string>
     <string name="tracking_channel_name">Location tracking</string>
     <string name="tracking_notification_title">ovayuvam is revealing your world</string>
-    <string name="tracking_notification_text">Visited cells stay on device. Tap to return.</string>
+    <string name="tracking_notification_text">Your walked places clear the fog. Tap to open the map.</string>
 </resources>

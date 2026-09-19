@@ -23,14 +23,13 @@ The app does not record:
 ## Sensitive data warning
 
 Visited cells are location history. They can reveal home, work, habits, medical
-visits, religious visits, and travel patterns. Treat exports as private even when
-they contain cells instead of raw GPS points.
+visits, religious visits, and travel patterns even when they are less precise than
+raw GPS points.
 
 ## Backup
 
 Android automatic backup and device transfer are disabled in version 1. Version
-0.2.0 has manual JSON export and import through Android's document picker. Exported
-files are private location history and are not encrypted by the app yet.
+0.3.0 has no export, import, account, backend, or sync feature.
 
 A later backup feature can use the user's Google Drive only after a clear opt-in.
 The backup should be encrypted on the device before upload. The app should not hold
@@ -44,9 +43,8 @@ visible after someone leaves a group.
 
 ## Delete
 
-Version 0.2.0 includes a local delete action that removes every visited cell stored
-by ovayuvam on the device. It does not delete files that the user already exported
-outside the app.
+Version 0.3.0 includes a local clear action in the info sheet. It removes every
+visited cell stored by ovayuvam on the device.
 
 ## No warranty
 

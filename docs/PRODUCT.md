@@ -16,11 +16,12 @@ This note is not legal clearance.
 
 Version 1 is a private fog-of-war map:
 
-- Start a visible tracking session.
+- Open the app.
+- Grant location permission.
 - Walk, travel, or explore.
-- Open the app to see visited areas revealed.
+- See the full-screen world map clear where you have walked.
 - Keep the data on the device.
-- Export, import, or delete your local world manually.
+- Use the small info button for privacy, contact, and local-clear controls.
 - Do not create an account.
 - Do not publish anything.
 
