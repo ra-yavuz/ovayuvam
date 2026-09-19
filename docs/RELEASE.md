@@ -6,7 +6,7 @@
 - Package: `tr.ovayuva.ovayuvam`
 - APK: `ovayuvam-0.4.0.apk`
 - Size: `44,358,823` bytes
-- SHA-256: `8d4ad2426c3ac57a7f7bb0f82d886fa7baf40aaba909fd93b33d4cb75b1cabef`
+- SHA-256: `2597564185f099e0e300c4545c606bc3ec02970f93dd6b6c223a4fc25beb7666`
 - Signing certificate SHA-256: `41a682a94ae3098fb09bf3e984be9c591f3093329618d057a59b3f922719873e`
 
 ## Verified
