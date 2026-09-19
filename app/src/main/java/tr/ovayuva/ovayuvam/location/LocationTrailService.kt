@@ -10,6 +10,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -18,6 +19,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import tr.ovayuva.ovayuvam.MainActivity
 import tr.ovayuva.ovayuvam.R
@@ -27,12 +29,14 @@ import tr.ovayuva.ovayuvam.storage.VisitRepository
 class LocationTrailService : Service() {
     private lateinit var locationManager: LocationManager
     private lateinit var repository: VisitRepository
+    private lateinit var trackingState: TrackingState
     private var listener: LocationListener? = null
 
     override fun onCreate() {
         super.onCreate()
         locationManager = getSystemService(LocationManager::class.java)
         repository = VisitRepository(this)
+        trackingState = TrackingState(this)
         ensureChannel()
     }
 
@@ -43,7 +47,12 @@ class LocationTrailService : Service() {
                 stopSelf()
             }
             else -> {
-                startForeground(NOTIFICATION_ID, notification())
+                if (!canTrackLocation()) {
+                    trackingState.setTracking(false)
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+                startAsForegroundLocationService()
                 startTracking()
             }
         }
@@ -59,7 +68,13 @@ class LocationTrailService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun startTracking() {
-        if (!hasLocationPermission() || listener != null) return
+        if (!canTrackLocation()) {
+            trackingState.setTracking(false)
+            stopSelf()
+            return
+        }
+        trackingState.setTracking(true)
+        if (listener != null) return
         val next = object : LocationListener {
             override fun onLocationChanged(location: Location) {
                 val cell = WorldCell.fromLocation(location.latitude, location.longitude)
@@ -71,19 +86,32 @@ class LocationTrailService : Service() {
             @Deprecated("Legacy Android callback")
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
         }
-        listener = next
-        locationManager.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER,
-            10_000L,
-            20f,
-            next,
-            Looper.getMainLooper(),
-        )
+        val activeProviders = providersForGrantedPermissions()
+        var registered = false
+        activeProviders.forEach { provider ->
+            runCatching {
+                locationManager.requestLocationUpdates(
+                    provider,
+                    10_000L,
+                    20f,
+                    next,
+                    Looper.getMainLooper(),
+                )
+                registered = true
+            }
+        }
+        if (registered) {
+            listener = next
+        } else {
+            trackingState.setTracking(false)
+            stopSelf()
+        }
     }
 
     private fun stopTracking() {
         listener?.let(locationManager::removeUpdates)
         listener = null
+        trackingState.setTracking(false)
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
@@ -93,6 +121,34 @@ class LocationTrailService : Service() {
         return fine == PackageManager.PERMISSION_GRANTED || coarse == PackageManager.PERMISSION_GRANTED
     }
 
+    private fun hasFineLocationPermission(): Boolean =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    private fun canTrackLocation(): Boolean = hasLocationPermission() && isDeviceLocationEnabled()
+
+    private fun isDeviceLocationEnabled(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            locationManager.isLocationEnabled
+        } else {
+            providerEnabled(LocationManager.GPS_PROVIDER) ||
+                providerEnabled(LocationManager.NETWORK_PROVIDER)
+        }
+
+    private fun providersForGrantedPermissions(): List<String> = buildList {
+        if (hasFineLocationPermission() && providerEnabled(LocationManager.GPS_PROVIDER)) {
+            add(LocationManager.GPS_PROVIDER)
+        }
+        if (providerEnabled(LocationManager.NETWORK_PROVIDER)) {
+            add(LocationManager.NETWORK_PROVIDER)
+        }
+        if (providerEnabled(LocationManager.PASSIVE_PROVIDER)) {
+            add(LocationManager.PASSIVE_PROVIDER)
+        }
+    }
+
+    private fun providerEnabled(provider: String): Boolean =
+        runCatching { locationManager.isProviderEnabled(provider) }.getOrDefault(false)
+
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
@@ -101,6 +157,19 @@ class LocationTrailService : Service() {
             NotificationManager.IMPORTANCE_LOW,
         )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+    }
+
+    private fun startAsForegroundLocationService() {
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notification(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            } else {
+                0
+            },
+        )
     }
 
     private fun notification(): Notification {
@@ -122,7 +191,7 @@ class LocationTrailService : Service() {
             .setContentText(getString(R.string.tracking_notification_text))
             .setContentIntent(openIntent)
             .setOngoing(true)
-            .addAction(0, "Stop", stopIntent)
+            .addAction(R.drawable.ic_launcher_monochrome, "Stop", stopIntent)
             .build()
     }
 
@@ -145,4 +214,3 @@ class LocationTrailService : Service() {
         }
     }
 }
-

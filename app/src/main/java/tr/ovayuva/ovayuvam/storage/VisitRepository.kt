@@ -4,6 +4,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import org.json.JSONArray
+import org.json.JSONObject
 import tr.ovayuva.ovayuvam.domain.VisitedCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.domain.WorldSummary
@@ -53,7 +55,78 @@ class VisitRepository(context: Context) {
         }
     }
 
-    fun recentCells(limit: Int = 800): List<VisitedCell> {
+    fun recentCells(limit: Int = 800): List<VisitedCell> = cells(limit)
+
+    fun clearAll() {
+        db.writableDatabase.transaction {
+            delete("visited_cells", null, null)
+        }
+    }
+
+    fun exportJson(): String {
+        val rows = cells(Int.MAX_VALUE)
+        val payload = JSONObject()
+            .put("schema", Schema)
+            .put("exportedAtMs", System.currentTimeMillis())
+            .put("cellCount", rows.size)
+        val items = JSONArray()
+        rows.forEach { cell ->
+            items.put(
+                JSONObject()
+                    .put("x", cell.x)
+                    .put("y", cell.y)
+                    .put("firstSeenMs", cell.firstSeenMs)
+                    .put("lastSeenMs", cell.lastSeenMs)
+                    .put("samples", cell.samples),
+            )
+        }
+        payload.put("cells", items)
+        return payload.toString(2)
+    }
+
+    fun replaceFromJson(json: String): Int {
+        val payload = JSONObject(json)
+        require(payload.getString("schema") == Schema) { "Unsupported export schema" }
+        val items = payload.getJSONArray("cells")
+        val parsed = buildList {
+            for (index in 0 until items.length()) {
+                val item = items.getJSONObject(index)
+                val firstSeen = item.getLong("firstSeenMs")
+                val lastSeen = item.getLong("lastSeenMs")
+                val samples = item.getInt("samples")
+                require(samples > 0) { "Samples must be positive" }
+                require(lastSeen >= firstSeen) { "Last seen must not be before first seen" }
+                add(
+                    VisitedCell(
+                        x = item.getInt("x"),
+                        y = item.getInt("y"),
+                        firstSeenMs = firstSeen,
+                        lastSeenMs = lastSeen,
+                        samples = samples,
+                    ),
+                )
+            }
+        }
+        db.writableDatabase.transaction {
+            delete("visited_cells", null, null)
+            parsed.forEach { cell ->
+                insert(
+                    "visited_cells",
+                    null,
+                    ContentValues().apply {
+                        put("cell_x", cell.x)
+                        put("cell_y", cell.y)
+                        put("first_seen_ms", cell.firstSeenMs)
+                        put("last_seen_ms", cell.lastSeenMs)
+                        put("samples", cell.samples)
+                    },
+                )
+            }
+        }
+        return parsed.size
+    }
+
+    private fun cells(limit: Int): List<VisitedCell> {
         db.readableDatabase.rawQuery(
             """
             SELECT cell_x, cell_y, first_seen_ms, last_seen_ms, samples
@@ -84,6 +157,10 @@ class VisitRepository(context: Context) {
         ).use { cursor ->
             return if (cursor.moveToFirst()) cursor.getInt(0) else 0
         }
+    }
+
+    companion object {
+        const val Schema = "ovayuvam.visited_cells.v1"
     }
 }
 
@@ -121,4 +198,3 @@ private inline fun SQLiteDatabase.transaction(block: SQLiteDatabase.() -> Unit) 
         endTransaction()
     }
 }
-

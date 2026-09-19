@@ -1,7 +1,10 @@
 package tr.ovayuva.ovayuvam
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,17 +15,24 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +51,7 @@ import kotlinx.coroutines.delay
 import tr.ovayuva.ovayuvam.domain.VisitedCell
 import tr.ovayuva.ovayuvam.domain.WorldSummary
 import tr.ovayuva.ovayuvam.location.LocationTrailService
+import tr.ovayuva.ovayuvam.location.TrackingState
 import tr.ovayuva.ovayuvam.storage.VisitRepository
 
 class MainActivity : ComponentActivity() {
@@ -59,9 +70,27 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun OvayuvamScreen(repository: VisitRepository) {
     val context = LocalContext.current
+    val trackingState = remember { TrackingState(context) }
     var summary by remember { mutableStateOf(repository.summary()) }
     var cells by remember { mutableStateOf(repository.recentCells()) }
-    var tracking by remember { mutableStateOf(false) }
+    var tracking by remember { mutableStateOf(trackingState.isTracking()) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var showClearDialog by remember { mutableStateOf(false) }
+
+    fun refresh() {
+        summary = repository.summary()
+        cells = repository.recentCells()
+        tracking = trackingState.isTracking()
+    }
+
+    fun startTracking() {
+        if (!isDeviceLocationEnabled(context)) {
+            message = "Turn on Android Location before starting ovayuvam."
+        } else if (hasLocationPermission(context)) {
+            LocationTrailService.start(context)
+            tracking = true
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -70,17 +99,63 @@ private fun OvayuvamScreen(repository: VisitRepository) {
             grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true ||
             hasLocationPermission(context)
         if (hasLocation) {
-            LocationTrailService.start(context)
-            tracking = true
+            startTracking()
+        } else {
+            message = "Location permission is needed before ovayuvam can reveal visited cells."
+        }
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri != null) {
+            runCatching { context.writeText(uri, repository.exportJson()) }
+                .onSuccess { message = "Private world exported." }
+                .onFailure { message = "Export failed: ${it.message ?: "unknown error"}" }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                val count = repository.replaceFromJson(context.readText(uri))
+                refresh()
+                count
+            }
+                .onSuccess { message = "Imported $it visited cells." }
+                .onFailure { message = "Import failed: ${it.message ?: "unknown error"}" }
         }
     }
 
     LaunchedEffect(Unit) {
         while (true) {
-            summary = repository.summary()
-            cells = repository.recentCells()
+            refresh()
             delay(2_000L)
         }
+    }
+
+    if (showClearDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDialog = false },
+            title = { Text("Delete local world?") },
+            text = { Text("This removes every visited cell stored by ovayuvam on this device. Export first if you want a private copy.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        LocationTrailService.stop(context)
+                        repository.clearAll()
+                        showClearDialog = false
+                        refresh()
+                        message = "Local world deleted."
+                    },
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
+            },
+        )
     }
 
     Surface(
@@ -90,57 +165,162 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column {
+            Header()
+            DisclosureCard()
+            WorldCanvas(
+                cells = cells,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(360.dp),
+            )
+            SummaryRow(summary)
+            Controls(
+                tracking = tracking,
+                onStart = {
+                    if (hasLocationPermission(context)) {
+                        startTracking()
+                    } else {
+                        permissionLauncher.launch(requiredPermissions())
+                    }
+                },
+                onStop = {
+                    LocationTrailService.stop(context)
+                    tracking = false
+                },
+            )
+            DataControls(
+                onExport = { exportLauncher.launch("ovayuvam-world.json") },
+                onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) },
+                onClear = { showClearDialog = true },
+            )
+            PrivacyPanel()
+            message?.let {
                 Text(
-                    text = "ovayuvam",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF18392E),
-                )
-                Text(
-                    text = "my own world",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color(0xFF48695D),
+                    text = it,
+                    color = Color(0xFF285B45),
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
 
-            WorldCanvas(cells = cells, modifier = Modifier.weight(1f).fillMaxWidth())
+@Composable
+private fun Header() {
+    Column {
+        Text(
+            text = "ovayuvam",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF18392E),
+        )
+        Text(
+            text = "my own world",
+            style = MaterialTheme.typography.titleMedium,
+            color = Color(0xFF48695D),
+        )
+    }
+}
 
-            SummaryRow(summary)
+@Composable
+private fun DisclosureCard() {
+    Panel {
+        Text(
+            text = "Before you start",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF18392E),
+        )
+        Text(
+            text = "ovayuvam records location-derived grid cells only after you start tracking. Tracking uses a visible notification. The app has no internet permission, no account, and no backend.",
+            color = Color(0xFF4B5651),
+        )
+    }
+}
 
-            Text(
-                text = "Tracking uses a visible notification. Visited cells stay on this device.",
-                color = Color(0xFF4B5651),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = {
-                        if (hasLocationPermission(context)) {
-                            LocationTrailService.start(context)
-                            tracking = true
-                        } else {
-                            permissionLauncher.launch(requiredPermissions())
-                        }
-                    },
-                ) {
-                    Text(if (tracking) "Tracking on" else "Start tracking")
-                }
-                Button(
-                    onClick = {
-                        LocationTrailService.stop(context)
-                        tracking = false
-                    },
-                ) {
-                    Text("Stop")
-                }
+@Composable
+private fun Controls(tracking: Boolean, onStart: () -> Unit, onStop: () -> Unit) {
+    Panel {
+        Text(
+            text = if (tracking) "Tracking is on" else "Tracking is off",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF18392E),
+        )
+        Text(
+            text = if (tracking) {
+                "Keep the notification visible while ovayuvam reveals your world."
+            } else {
+                "Start tracking when you want new places to be revealed."
+            },
+            color = Color(0xFF4B5651),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onStart, enabled = !tracking) {
+                Text("Start")
+            }
+            OutlinedButton(onClick = onStop, enabled = tracking) {
+                Text("Stop")
             }
         }
     }
+}
+
+@Composable
+private fun DataControls(onExport: () -> Unit, onImport: () -> Unit, onClear: () -> Unit) {
+    Panel {
+        Text(
+            text = "Your data",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF18392E),
+        )
+        Text(
+            text = "Export and import are manual JSON files. Treat them as private location history.",
+            color = Color(0xFF4B5651),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            OutlinedButton(onClick = onExport, modifier = Modifier.weight(1f)) { Text("Export") }
+            OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) { Text("Import") }
+            OutlinedButton(onClick = onClear, modifier = Modifier.weight(1f)) { Text("Delete") }
+        }
+    }
+}
+
+@Composable
+private fun PrivacyPanel() {
+    Panel {
+        Text(
+            text = "Privacy",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF18392E),
+        )
+        Text(
+            text = "No route leaves this app in version 1. Android automatic backup is disabled. Future Google Drive backup and friend groups must be explicit opt-ins.",
+            color = Color(0xFF4B5651),
+        )
+    }
+}
+
+@Composable
+private fun Panel(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(8.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        content = content,
+    )
 }
 
 @Composable
@@ -160,7 +340,7 @@ private fun SummaryRow(summary: WorldSummary) {
 
 @Composable
 private fun Stat(label: String, value: String) {
-    Column {
+    Column(modifier = Modifier.widthIn(min = 72.dp)) {
         Text(text = label, color = Color(0xFF6A746F), style = MaterialTheme.typography.labelMedium)
         Spacer(Modifier.height(2.dp))
         Text(text = value, color = Color(0xFF18392E), fontWeight = FontWeight.Bold)
@@ -216,9 +396,30 @@ private fun requiredPermissions(): Array<String> = buildList {
     }
 }.toTypedArray()
 
-private fun hasLocationPermission(context: android.content.Context): Boolean {
+private fun hasLocationPermission(context: Context): Boolean {
     val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
     val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
     return fine == PackageManager.PERMISSION_GRANTED || coarse == PackageManager.PERMISSION_GRANTED
 }
 
+private fun isDeviceLocationEnabled(context: Context): Boolean {
+    val locationManager = context.getSystemService(LocationManager::class.java)
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        locationManager.isLocationEnabled
+    } else {
+        runCatching { locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) }.getOrDefault(false) ||
+            runCatching { locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) }.getOrDefault(false)
+    }
+}
+
+private fun Context.writeText(uri: Uri, text: String) {
+    contentResolver.openOutputStream(uri)?.use { stream ->
+        stream.write(text.toByteArray(Charsets.UTF_8))
+    } ?: error("Could not open export file")
+}
+
+private fun Context.readText(uri: Uri): String {
+    return contentResolver.openInputStream(uri)?.use { stream ->
+        stream.reader(Charsets.UTF_8).readText()
+    } ?: error("Could not open import file")
+}

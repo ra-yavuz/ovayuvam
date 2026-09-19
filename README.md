@@ -12,26 +12,31 @@ a persistent notification. Hidden tracking is not a goal.
 
 ## Status
 
-This is an early seed repo. It contains:
+This is a production-ready local-first v1 release for sideloaded Android use. It
+contains:
 
 - A standalone Android project under `app/`.
 - A local SQLite store for visited fog-grid cells.
 - A simple Compose screen that draws revealed cells without remote map tiles.
 - A visible location tracking service.
+- Manual private-world JSON export, import, and local delete controls.
 - A draft public page for `https://ovayuva.tr/yuvam/` under `web/yuvam/`.
 - Product, privacy, architecture, and roadmap notes under `docs/`.
 
 ## Download
 
-First APK release: `0.1.0`.
+Current APK release: `0.2.0`.
 
-- Download: [ovayuvam-0.1.0.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.1.0/ovayuvam-0.1.0.apk)
+- Download: [ovayuvam-0.2.0.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.2.0/ovayuvam-0.2.0.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.2.0.apk](https://ovayuva.tr/yuvam/ovayuvam-0.2.0.apk)
 - Package: `tr.ovayuva.ovayuvam`
-- Size: `1,248,989` bytes
-- SHA-256: `f733a97f9c2c6b3abebb3c230282f1812eca163333f639cb78bf3d1f241fc080`
+- Size: `1,347,297` bytes
+- SHA-256: `23533dadc5a9e7f5405cfff5d64032797ea290779f023f618872d187db71b2d5`
 
-This is an early sideloaded APK outside Google Play. Android may ask you to allow
-installation from your browser or file manager.
+This is a sideloaded APK outside Google Play. Android may ask you to allow
+installation from your browser or file manager. If a browser reaches 100 percent
+and appears stuck, open the Downloads or Files app and install the completed APK
+from there.
 
 ## What is deliberately out of scope for version 1
 
@@ -42,6 +47,7 @@ installation from your browser or file manager.
 - No shared world upload.
 - No remote map tile provider.
 - No automatic Google Drive upload.
+- No Play Store listing or Play policy review yet.
 
 Future versions can add optional encrypted backup to the user's Google Drive and
 optional friend groups. Those features must be separate opt-ins, not default data

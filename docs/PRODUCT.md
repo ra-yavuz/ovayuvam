@@ -20,6 +20,7 @@ Version 1 is a private fog-of-war map:
 - Walk, travel, or explore.
 - Open the app to see visited areas revealed.
 - Keep the data on the device.
+- Export, import, or delete your local world manually.
 - Do not create an account.
 - Do not publish anything.
 
@@ -28,11 +29,10 @@ Version 1 is a private fog-of-war map:
 Later versions can add:
 
 - Encrypted Google Drive backup.
-- Import and restore on a new phone.
+- Encrypted restore on a new phone.
 - Friend groups.
 - Shared group worlds.
 - Selective sharing by area or trip.
 - Optional offline basemap packs.
 
 The default mode should remain private.
-

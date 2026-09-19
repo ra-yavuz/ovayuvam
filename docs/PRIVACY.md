@@ -28,9 +28,13 @@ they contain cells instead of raw GPS points.
 
 ## Backup
 
-Android automatic backup is disabled in version 1. A later backup feature can use
-the user's Google Drive only after a clear opt-in. The backup should be encrypted on
-the device before upload. The app should not hold a server-side recovery key.
+Android automatic backup and device transfer are disabled in version 1. Version
+0.2.0 has manual JSON export and import through Android's document picker. Exported
+files are private location history and are not encrypted by the app yet.
+
+A later backup feature can use the user's Google Drive only after a clear opt-in.
+The backup should be encrypted on the device before upload. The app should not hold
+a server-side recovery key.
 
 ## Friend sharing
 
@@ -38,8 +42,13 @@ Sharing is not part of version 1. A later friend group feature should be opt-in 
 group and should explain what friends can see, what they cannot see, and what remains
 visible after someone leaves a group.
 
+## Delete
+
+Version 0.2.0 includes a local delete action that removes every visited cell stored
+by ovayuvam on the device. It does not delete files that the user already exported
+outside the app.
+
 ## No warranty
 
 No warranty is provided. You use this software at your own risk. Do not use it for
 emergencies, safety, navigation, legal proof, or important records.
-
