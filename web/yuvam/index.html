@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ovayuvam - your own world</title>
+  <meta name="description" content="ovayuvam is a private fog-of-war map from ovayuva. Your own world, on your own phone.">
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; color: #18392e; background: #f7f4ec; }
+    body { margin: 0; }
+    header, main, footer { max-width: 960px; margin: 0 auto; padding: 24px; }
+    nav { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+    nav a { color: #245c48; font-weight: 700; text-decoration: none; }
+    .hero { min-height: 72vh; display: grid; align-content: center; gap: 22px; }
+    h1 { margin: 0; font-size: clamp(3rem, 12vw, 8rem); letter-spacing: 0; line-height: .92; }
+    .lead { max-width: 680px; font-size: clamp(1.2rem, 3vw, 1.7rem); line-height: 1.45; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .actions a { border: 1px solid #245c48; border-radius: 6px; padding: 12px 16px; color: #245c48; text-decoration: none; font-weight: 700; }
+    section { padding: 44px 0; border-top: 1px solid #d7ded4; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+    .item { background: #fff; border: 1px solid #d7ded4; border-radius: 8px; padding: 18px; }
+    p, li { line-height: 1.65; }
+    footer { color: #4b5651; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/">ovayuva</a>
+      <a href="https://github.com/ra-yavuz/ovayuvam">source</a>
+    </nav>
+  </header>
+  <main>
+    <section class="hero">
+      <p>Private by default. Local first.</p>
+      <h1>ovayuvam</h1>
+      <p class="lead">A fog-of-war map for your own life. Walk, travel, come back later, and see the world you have uncovered.</p>
+      <div class="actions">
+        <a href="https://github.com/ra-yavuz/ovayuvam">Open source repo</a>
+        <a href="#roadmap">Roadmap</a>
+      </div>
+    </section>
+
+    <section>
+      <h2>First version</h2>
+      <div class="grid">
+        <div class="item"><strong>On device</strong><p>Your visited world starts on your phone, not on an ovayuva server.</p></div>
+        <div class="item"><strong>No account</strong><p>No sign-in, public profile, friend graph, or backend is needed for version 1.</p></div>
+        <div class="item"><strong>Visible tracking</strong><p>Location recording is started by you and shown with a persistent notification.</p></div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <h2>Later</h2>
+      <p>Optional encrypted Google Drive backup can help you move phones. Optional friend groups can let people share selected worlds. Both should stay opt-in.</p>
+    </section>
+  </main>
+  <footer>
+    No warranty is provided. Use at your own risk. Do not use ovayuvam for emergencies, safety, navigation, legal proof, or important records.
+  </footer>
+</body>
+</html>
+

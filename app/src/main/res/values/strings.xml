@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ovayuvam</string>
+    <string name="tracking_channel_name">Location tracking</string>
+    <string name="tracking_notification_title">ovayuvam is revealing your world</string>
+    <string name="tracking_notification_text">Location stays on device. Tap to return.</string>
+</resources>
+

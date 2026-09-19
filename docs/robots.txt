@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ra-yavuz.github.io/ovayuvam/sitemap.xml
+

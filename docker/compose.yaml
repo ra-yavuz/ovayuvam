@@ -1,0 +1,12 @@
+services:
+  android:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    working_dir: /work
+    volumes:
+      - ..:/work
+      - gradle-cache:/root/.gradle
+
+volumes:
+  gradle-cache:
