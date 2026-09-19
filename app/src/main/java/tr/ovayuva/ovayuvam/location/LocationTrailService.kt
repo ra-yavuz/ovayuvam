@@ -70,7 +70,7 @@ class LocationTrailService : Service() {
         val next = object : LocationListener {
             override fun onLocationChanged(location: Location) {
                 val cell = WorldCell.fromLocation(location.latitude, location.longitude)
-                repository.record(cell, System.currentTimeMillis())
+                repository.recordVisitArea(cell, System.currentTimeMillis(), radiusCells = 2)
                 trackingState.setCurrentCell(cell)
             }
 
@@ -85,8 +85,8 @@ class LocationTrailService : Service() {
             runCatching {
                 locationManager.requestLocationUpdates(
                     provider,
-                    10_000L,
-                    20f,
+                    1_000L,
+                    2f,
                     next,
                     Looper.getMainLooper(),
                 )
@@ -95,6 +95,10 @@ class LocationTrailService : Service() {
         }
         if (registered) {
             listener = next
+            activeProviders
+                .mapNotNull { provider -> runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull() }
+                .maxByOrNull { it.time }
+                ?.let(next::onLocationChanged)
         } else {
             trackingState.setTracking(false)
             stopSelf()

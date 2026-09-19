@@ -13,28 +13,44 @@ class VisitRepository(context: Context) {
 
     fun record(cell: WorldCell, seenMs: Long = System.currentTimeMillis()) {
         db.writableDatabase.transaction {
-            val updated = update(
-                "visited_cells",
-                ContentValues().apply {
-                    put("last_seen_ms", seenMs)
-                    put("samples", rawSamples(cell) + 1)
-                },
-                "cell_x = ? AND cell_y = ?",
-                arrayOf(cell.x.toString(), cell.y.toString()),
-            )
-            if (updated == 0) {
-                insert(
-                    "visited_cells",
-                    null,
-                    ContentValues().apply {
-                        put("cell_x", cell.x)
-                        put("cell_y", cell.y)
-                        put("first_seen_ms", seenMs)
-                        put("last_seen_ms", seenMs)
-                        put("samples", 1)
-                    },
-                )
+            recordCell(cell, seenMs)
+        }
+    }
+
+    fun recordVisitArea(center: WorldCell, seenMs: Long = System.currentTimeMillis(), radiusCells: Int = 2) {
+        db.writableDatabase.transaction {
+            for (dx in -radiusCells..radiusCells) {
+                for (dy in -radiusCells..radiusCells) {
+                    if (dx * dx + dy * dy <= radiusCells * radiusCells) {
+                        recordCell(WorldCell(center.x + dx, center.y + dy), seenMs)
+                    }
+                }
             }
+        }
+    }
+
+    private fun SQLiteDatabase.recordCell(cell: WorldCell, seenMs: Long) {
+        val updated = update(
+            "visited_cells",
+            ContentValues().apply {
+                put("last_seen_ms", seenMs)
+                put("samples", rawSamples(cell) + 1)
+            },
+            "cell_x = ? AND cell_y = ?",
+            arrayOf(cell.x.toString(), cell.y.toString()),
+        )
+        if (updated == 0) {
+            insert(
+                "visited_cells",
+                null,
+                ContentValues().apply {
+                    put("cell_x", cell.x)
+                    put("cell_y", cell.y)
+                    put("first_seen_ms", seenMs)
+                    put("last_seen_ms", seenMs)
+                    put("samples", 1)
+                },
+            )
         }
     }
 

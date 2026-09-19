@@ -39,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -90,6 +89,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+private const val InitialZoom = 1.1f
+private const val MinZoom = 0.07f
+private const val MaxZoom = 32f
+private const val RevealRadiusCells = 3.2f
+
+private data class RevealMark(
+    val cell: WorldCell,
+    val point: Offset,
+    val samples: Int,
+)
 
 @Composable
 private fun OvayuvamScreen(repository: VisitRepository) {
@@ -142,7 +152,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     LaunchedEffect(Unit) {
         while (true) {
             refresh()
-            delay(1_500L)
+            delay(750L)
         }
     }
 
@@ -251,9 +261,9 @@ private fun BrandPill(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
-                painter = painterResource(R.drawable.art_map),
+                painter = painterResource(R.drawable.launcher_map_foreground),
                 contentDescription = null,
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(32.dp),
             )
             Spacer(Modifier.width(8.dp))
             Text(
@@ -351,7 +361,7 @@ private fun FogWorldMap(
     onUserMovedMap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var zoom by remember { mutableStateOf(1.1f) }
+    var zoom by remember { mutableStateOf(InitialZoom) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     val fallbackCenter = remember(cells) {
         if (cells.isEmpty()) {
@@ -368,7 +378,7 @@ private fun FogWorldMap(
     LaunchedEffect(recenterRequest, currentCell) {
         if (following) {
             pan = Offset.Zero
-            zoom = 1.1f
+            zoom = InitialZoom
         }
     }
 
@@ -377,13 +387,12 @@ private fun FogWorldMap(
             detectTransformGestures { _, panChange, zoomChange, _ ->
                 if (panChange != Offset.Zero || zoomChange != 1f) onUserMovedMap()
                 pan += panChange
-                zoom = (zoom * zoomChange).coerceIn(0.65f, 4.0f)
+                zoom = (zoom * zoomChange).coerceIn(MinZoom, MaxZoom)
             }
         },
     ) {
         drawPaperMap(center, pan, zoom)
         drawRect(Fog)
-        drawFogTexture(center, pan, zoom)
         drawRevealedCells(cells, currentCell, center, pan, zoom)
         currentCell?.let { drawCurrentDot(it, center, pan, zoom) }
     }
@@ -397,18 +406,23 @@ private fun DrawScope.drawPaperMap(center: WorldCell, pan: Offset, zoom: Float) 
     val minY = floor((pan.y - size.height * 0.65f) / cellPx + center.y).toInt()
     val maxY = ceil((pan.y + size.height * 0.65f) / cellPx + center.y).toInt()
 
-    for (x in minX..maxX step 7) {
+    val verticalStep = max(7, ceil(44f / cellPx).toInt())
+    val horizontalStep = max(6, ceil(40f / cellPx).toInt())
+    val detailStepX = max(11, ceil(72f / cellPx).toInt())
+    val detailStepY = max(9, ceil(64f / cellPx).toInt())
+
+    for (x in minX..maxX step verticalStep) {
         val p1 = cellToScreen(x, minY, center, pan, cellPx)
         val p2 = cellToScreen(x + wobble(x, minY, 2), maxY, center, pan, cellPx)
         drawLine(Color(0xFFBAC6BD).copy(alpha = 0.38f), p1, p2, 2.2f)
     }
-    for (y in minY..maxY step 6) {
+    for (y in minY..maxY step horizontalStep) {
         val p1 = cellToScreen(minX, y + wobble(minX, y, 3), center, pan, cellPx)
         val p2 = cellToScreen(maxX, y, center, pan, cellPx)
         drawLine(Color(0xFF97B0A1).copy(alpha = 0.28f), p1, p2, 1.7f)
     }
-    for (x in minX..maxX step 11) {
-        for (y in minY..maxY step 9) {
+    for (x in minX..maxX step detailStepX) {
+        for (y in minY..maxY step detailStepY) {
             if (noise(x, y) > 0.58f) {
                 val topLeft = cellToScreen(x, y, center, pan, cellPx)
                 drawOval(
@@ -417,26 +431,6 @@ private fun DrawScope.drawPaperMap(center: WorldCell, pan: Offset, zoom: Float) 
                     size = Size(cellPx * (2.5f + noise(y, x)), cellPx * (1.5f + noise(x + 4, y))),
                 )
             }
-        }
-    }
-}
-
-private fun DrawScope.drawFogTexture(center: WorldCell, pan: Offset, zoom: Float) {
-    val cellPx = cellPixels(zoom) * 1.8f
-    val startX = floor((-pan.x - size.width) / cellPx).toInt()
-    val endX = ceil((-pan.x + size.width) / cellPx).toInt()
-    val startY = floor((-pan.y - size.height) / cellPx).toInt()
-    val endY = ceil((-pan.y + size.height) / cellPx).toInt()
-    for (x in startX..endX) {
-        for (y in startY..endY) {
-            val left = x * cellPx + pan.x + size.width / 2f + center.x % 5
-            val top = y * cellPx + pan.y + size.height / 2f + center.y % 5
-            val alpha = 0.10f + noise(x + center.x, y + center.y) * 0.18f
-            drawOval(
-                color = Color(0xFF0E1714).copy(alpha = alpha),
-                topLeft = Offset(left, top),
-                size = Size(cellPx * 1.45f, cellPx * 1.1f),
-            )
         }
     }
 }
@@ -452,48 +446,92 @@ private fun DrawScope.drawRevealedCells(
     val revealed = linkedMapOf<Pair<Int, Int>, Int>()
     cells.forEach { revealed[it.x to it.y] = it.samples }
     currentCell?.let { revealed[it.x to it.y] = max(revealed[it.x to it.y] ?: 1, 3) }
+    val brushRadius = cellPx * RevealRadiusCells
+    val canvasWidth = size.width
+    val canvasHeight = size.height
+    val visible = buildList {
+        revealed.forEach { entry ->
+            val cell = WorldCell(entry.key.first, entry.key.second)
+            val point = cellToScreen(cell.x, cell.y, center, pan, cellPx)
+            if (
+                point.x + brushRadius >= 0f &&
+                point.y + brushRadius >= 0f &&
+                point.x - brushRadius <= canvasWidth &&
+                point.y - brushRadius <= canvasHeight
+            ) {
+                add(RevealMark(cell, point, entry.value))
+            }
+        }
+    }
 
-    revealed.forEach { entry ->
-        val x = entry.key.first
-        val y = entry.key.second
-        val topLeft = cellToScreen(x, y, center, pan, cellPx) - Offset(cellPx / 2f, cellPx / 2f)
-        if (topLeft.x > size.width || topLeft.y > size.height || topLeft.x + cellPx < 0f || topLeft.y + cellPx < 0f) return@forEach
-        val strength = (0.78f + entry.value.coerceAtMost(6) * 0.03f).coerceAtMost(0.96f)
-        drawCircle(
-            color = Revealed.copy(alpha = 0.18f),
-            radius = cellPx * 1.2f,
-            center = topLeft + Offset(cellPx / 2f, cellPx / 2f),
-        )
-        drawRoundRect(
-            color = Revealed.copy(alpha = strength),
-            topLeft = topLeft,
-            size = Size(cellPx + 1f, cellPx + 1f),
-            cornerRadius = CornerRadius(cellPx * 0.18f, cellPx * 0.18f),
-        )
-        drawCellInk(topLeft, cellPx, x, y)
+    visible.forEach { mark ->
+        drawRevealBrush(mark, brushRadius)
+    }
+    visible.forEach { mark ->
+        drawRevealInk(mark, brushRadius)
     }
 }
 
-private fun DrawScope.drawCellInk(topLeft: Offset, cellPx: Float, x: Int, y: Int) {
-    val road = Color(0xFF5E7468).copy(alpha = 0.62f)
-    val water = Color(0xFF9AD5DA).copy(alpha = 0.34f)
-    val path = Path().apply {
-        moveTo(topLeft.x, topLeft.y + cellPx * (0.35f + noise(x, y) * 0.3f))
-        cubicTo(
-            topLeft.x + cellPx * 0.25f,
-            topLeft.y + cellPx * noise(y, x),
-            topLeft.x + cellPx * 0.72f,
-            topLeft.y + cellPx * (0.45f + noise(x + 2, y) * 0.2f),
-            topLeft.x + cellPx,
-            topLeft.y + cellPx * (0.3f + noise(x, y + 2) * 0.42f),
+private fun DrawScope.drawRevealBrush(mark: RevealMark, radius: Float) {
+    val x = mark.cell.x
+    val y = mark.cell.y
+    val strength = (0.82f + mark.samples.coerceAtMost(8) * 0.02f).coerceAtMost(0.96f)
+    val offsets = listOf(
+        Offset(-0.32f, -0.08f),
+        Offset(0.28f, -0.18f),
+        Offset(-0.18f, 0.28f),
+        Offset(0.34f, 0.18f),
+        Offset(0.04f, -0.36f),
+    )
+    offsets.forEachIndexed { index, offset ->
+        val roughRadius = radius * (0.62f + noise(x + index * 11, y - index * 7) * 0.28f)
+        drawCircle(
+            color = Revealed.copy(alpha = 0.14f),
+            radius = roughRadius,
+            center = mark.point + Offset(offset.x * radius, offset.y * radius),
         )
     }
-    drawPath(path, road, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.7f))
+    drawCircle(
+        color = Revealed.copy(alpha = 0.22f),
+        radius = radius * 1.05f,
+        center = mark.point,
+    )
+    drawCircle(
+        color = Paper.copy(alpha = strength),
+        radius = radius * 0.9f,
+        center = mark.point,
+    )
+    drawCircle(
+        color = Color.White.copy(alpha = 0.10f),
+        radius = radius * 0.48f,
+        center = mark.point + Offset(radius * 0.08f, -radius * 0.05f),
+    )
+}
+
+private fun DrawScope.drawRevealInk(mark: RevealMark, radius: Float) {
+    val x = mark.cell.x
+    val y = mark.cell.y
+    val road = Color(0xFF536F61).copy(alpha = 0.46f)
+    val water = Color(0xFF78B7BE).copy(alpha = 0.24f)
+    val center = mark.point
+    val strokeWidth = (radius * 0.018f).coerceIn(1.1f, 4.8f)
+    val path = Path().apply {
+        moveTo(center.x - radius * 0.82f, center.y + radius * (-0.22f + noise(x, y) * 0.38f))
+        cubicTo(
+            center.x - radius * 0.32f,
+            center.y - radius * (0.46f + noise(y, x) * 0.12f),
+            center.x + radius * 0.28f,
+            center.y + radius * (0.24f + noise(x + 2, y) * 0.12f),
+            center.x + radius * 0.82f,
+            center.y + radius * (-0.12f + noise(x, y + 2) * 0.36f),
+        )
+    }
+    drawPath(path, road, style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth))
     if (noise(x + 9, y - 3) > 0.72f) {
         drawOval(
             color = water,
-            topLeft = topLeft + Offset(cellPx * 0.18f, cellPx * 0.18f),
-            size = Size(cellPx * 0.56f, cellPx * 0.22f),
+            topLeft = center + Offset(-radius * 0.24f, radius * 0.12f),
+            size = Size(radius * 0.54f, radius * 0.22f),
         )
     }
 }
@@ -507,19 +545,6 @@ private fun DrawScope.drawCurrentDot(cell: WorldCell, center: WorldCell, pan: Of
 }
 
 private fun cellPixels(zoom: Float): Float = 22f * zoom
-
-private fun cellToScreen(
-    x: Int,
-    y: Int,
-    center: WorldCell,
-    pan: Offset,
-    cellPx: Float,
-): Offset = Offset(
-    x = (x - center.x) * cellPx + pan.x,
-    y = (center.y - y) * cellPx + pan.y,
-)
-
-private operator fun Offset.plus(size: Size): Offset = Offset(x + size.width, y + size.height)
 
 private fun DrawScope.cellToScreen(
     x: Int,

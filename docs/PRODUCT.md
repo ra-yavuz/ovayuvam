@@ -19,11 +19,14 @@ Version 1 is a private fog-of-war map:
 - Open the app.
 - Grant location permission.
 - Walk, travel, or explore.
-- See the full-screen world map clear where you have walked.
+- See the full-screen world map clear in a soft radius where you have walked.
 - Keep the data on the device.
 - Use the small info button for privacy, contact, and local-clear controls.
 - Do not create an account.
 - Do not publish anything.
+
+The reveal should feel like a paintbrush trail through fog. It should not expose
+the world as square chunks.
 
 ## Later
 

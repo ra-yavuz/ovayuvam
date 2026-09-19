@@ -19,16 +19,18 @@ The local database stores grid cells, first seen time, last seen time, and sampl
 count. It does not store raw route uploads. This still counts as sensitive
 location history because repeated cells can reveal routines.
 
-Android cloud backup and device transfer are disabled for version 1. Version 0.3.0
+Android cloud backup and device transfer are disabled for version 1. Version 0.3.1
 does not include export or import UI. Later Google Drive backup should be explicit,
 encrypted, user-started, and restorable without an ovayuva server.
 
 ## Map approach
 
 Version 1 draws a local full-screen fog map. It starts with a parchment-like map
-that is darkened by fog, then clears local cells as the user walks. It does not
-request remote map tiles. A later map layer can be added only after map licensing,
-provider privacy, offline behavior, and attribution are handled.
+that is darkened by fog, then clears a soft circular radius as the user walks.
+The visible trail is meant to feel like brushing fog from paper, not like square
+tile chunks. It does not request remote map tiles. A later map layer can be added
+only after map licensing, provider privacy, offline behavior, and attribution are
+handled.
 
 The app has no runtime `INTERNET` permission. The map works without app network
 access because the first version is not a real basemap. It is a local drawing of

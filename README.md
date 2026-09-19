@@ -18,7 +18,7 @@ contains:
 
 - A standalone Android project under `app/`.
 - A local SQLite store for visited fog-grid cells.
-- A full-screen Compose fog map that draws revealed cells without remote map tiles.
+- A full-screen Compose fog map that draws soft circular reveal trails without remote map tiles.
 - Automatic visible location tracking after permission is granted.
 - A small info sheet with privacy, contact, and local-clear controls.
 - Ovayuva-style hand-drawn colors, fonts, and map controls.
@@ -27,13 +27,13 @@ contains:
 
 ## Download
 
-Current APK release: `0.3.0`.
+Current APK release: `0.3.1`.
 
-- Download: [ovayuvam-0.3.0.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.3.0/ovayuvam-0.3.0.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.3.0.apk](https://ovayuva.tr/yuvam/ovayuvam-0.3.0.apk)
+- Download: [ovayuvam-0.3.1.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.3.1/ovayuvam-0.3.1.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.3.1.apk](https://ovayuva.tr/yuvam/ovayuvam-0.3.1.apk)
 - Package: `tr.ovayuva.ovayuvam`
-- Size: `1,657,258` bytes
-- SHA-256: `182a9cc8e6d2157c1af430e84dc3d1358fbd2c535d87ea85f65ddf0fea476958`
+- Size: `1,657,262` bytes
+- SHA-256: `a9a20543a51e712fbf6e6a3ca76afee954e25c3042f164ae4fd1f69de7d0989f`
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent

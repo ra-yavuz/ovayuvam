@@ -29,7 +29,7 @@ raw GPS points.
 ## Backup
 
 Android automatic backup and device transfer are disabled in version 1. Version
-0.3.0 has no export, import, account, backend, or sync feature.
+0.3.1 has no export, import, account, backend, or sync feature.
 
 A later backup feature can use the user's Google Drive only after a clear opt-in.
 The backup should be encrypted on the device before upload. The app should not hold
@@ -43,7 +43,7 @@ visible after someone leaves a group.
 
 ## Delete
 
-Version 0.3.0 includes a local clear action in the info sheet. It removes every
+Version 0.3.1 includes a local clear action in the info sheet. It removes every
 visited cell stored by ovayuvam on the device.
 
 ## No warranty

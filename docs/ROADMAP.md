@@ -8,7 +8,7 @@
 - No `INTERNET` permission.
 - Automatic visible location tracking after permission is granted.
 - Fog-grid storage in SQLite.
-- Full-screen local fog map.
+- Full-screen local fog map with circular reveal trails and wide zoom.
 - Local delete.
 - Public page at `ovayuva.tr/yuvam/`.
 

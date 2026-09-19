@@ -20,7 +20,7 @@ val PaperDeep = Color(0xFFE3ECE4)
 val Ink = Color(0xFF242A28)
 val Forest = Color(0xFF285B45)
 val Mint = Color(0xFFD8EBDD)
-val Fog = Color(0xCC17211D)
+val Fog = Color(0x9917211D)
 val Revealed = Color(0xFFEAF4EC)
 
 private val LightColors = lightColorScheme(
