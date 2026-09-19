@@ -10,5 +10,5 @@ local.properties
 keystore.properties
 captures/
 app/build/
+release/
 docs/*.tmp
-

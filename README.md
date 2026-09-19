@@ -21,6 +21,18 @@ This is an early seed repo. It contains:
 - A draft public page for `https://ovayuva.tr/yuvam/` under `web/yuvam/`.
 - Product, privacy, architecture, and roadmap notes under `docs/`.
 
+## Download
+
+First APK release: `0.1.0`.
+
+- Download: [ovayuvam-0.1.0.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.1.0/ovayuvam-0.1.0.apk)
+- Package: `tr.ovayuva.ovayuvam`
+- Size: `1,248,989` bytes
+- SHA-256: `f733a97f9c2c6b3abebb3c230282f1812eca163333f639cb78bf3d1f241fc080`
+
+This is an early sideloaded APK outside Google Play. Android may ask you to allow
+installation from your browser or file manager.
+
 ## What is deliberately out of scope for version 1
 
 - No ovayuva backend.
