@@ -28,13 +28,18 @@ contains:
 
 ## Download
 
-Current APK release: `0.4.2`.
+Current APK release: `0.4.3`.
 
-- Download: [ovayuvam-0.4.2.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.4.2/ovayuvam-0.4.2.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.4.2.apk](https://ovayuva.tr/yuvam/ovayuvam-0.4.2.apk)
+- Download: [ovayuvam-0.4.3.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.4.3/ovayuvam-0.4.3.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.4.3.apk](https://ovayuva.tr/yuvam/ovayuvam-0.4.3.apk)
 - Package: `tr.ovayuva.ovayuvam`
 - Size: `44,510,939` bytes
-- SHA-256: `2137dfee56a872a5796a67cc04ccbcf46ae48bb36768e307eb7518fd59178b53`
+- SHA-256: `9ddf501d2a3ffae86207eff6d0273600bc01a9a62e63365881d47240c9a92f7a`
+
+Google Play Console uploads should use the signed Android App Bundle:
+
+- Bundle: `release/ovayuvam-0.4.3.aab`
+- Bundle SHA-256: `22dd58fa9d7a99fe46d13f9db6dcf889611888f8595e246ceb785407b3a58e2b`
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent
@@ -51,7 +56,7 @@ from there.
 - No ovayuva map backend. The basemap is loaded from OpenFreeMap/OpenStreetMap.
 - No export or import UI in this simple first map release.
 - No automatic Google Drive upload.
-- No Play Store listing or Play policy review yet.
+- No Google Play developer-account submission or review approval yet.
 
 Future versions can add optional encrypted backup to the user's Google Drive and
 optional friend groups. Those features must be separate opt-ins, not default data

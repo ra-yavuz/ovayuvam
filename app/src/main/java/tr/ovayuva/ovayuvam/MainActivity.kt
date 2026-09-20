@@ -350,6 +350,8 @@ private fun InfoDialog(tracking: Boolean, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
                 Text(if (tracking) "Tracking is on and shown by a notification." else "Tracking is waiting for location access.")
                 Spacer(Modifier.height(10.dp))
+                Text("Privacy policy: https://ovayuva.tr/yuvam/privacy/")
+                Spacer(Modifier.height(10.dp))
                 Text("Map data: ${BasemapStyle.Attribution}. Impressum: Tangelo Bilisim Ltd. Contact: contact@tangelo.com.tr. No warranty is provided.")
             }
         },
