@@ -24,6 +24,7 @@ Version 1 is a private fog-of-war map:
 - Long-press the map to place a private goal pin.
 - Follow the edge arrow when the goal pin is outside the visible map.
 - Keep the data on the device.
+- Export an encrypted backup manually before changing phones or reinstalling.
 - Use the small info button for privacy, contact, and legal details.
 - Do not create an account.
 - Do not publish anything.
@@ -32,14 +33,15 @@ The reveal should feel like a paintbrush trail through real fog. It should not
 leave the unexplored map readable, and it should not expose the world as square chunks.
 
 The basemap uses OpenFreeMap/OpenStreetMap tiles. The user's revealed world remains
-local to the phone unless a future opt-in backup or sharing feature is added.
+local to the phone unless the user manually exports an encrypted backup or a future
+opt-in backup or sharing feature is added.
 
 ## Later
 
 Later versions can add:
 
-- Encrypted Google Drive backup.
-- Encrypted restore on a new phone.
+- Automatic encrypted Google Drive backup.
+- Easier encrypted restore on a new phone.
 - Friend groups.
 - Shared group worlds.
 - Selective sharing by area or trip.

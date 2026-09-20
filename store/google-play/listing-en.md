@@ -26,8 +26,11 @@ Privacy is the default shape:
 - No public profile.
 - No friend sharing in this first release.
 - Android cloud backup is disabled.
+- Manual encrypted export/import is available from the info sheet.
 
 The map uses OpenFreeMap and OpenStreetMap-based map tiles, so the app needs internet access for the visible basemap. Your revealed-world cells and optional goal pin stay in local app storage on your phone.
+
+If you are changing phones or reinstalling, export an encrypted backup first and keep the passphrase. ovayuvam cannot recover it.
 
 Location use is visible. ovayuvam starts tracking after Android location permission is granted and shows an Android notification while tracking is active.
 

@@ -2,7 +2,7 @@
 
 Google Play needs phone screenshots for the store listing.
 
-Capture from a real or emulator install of `ovayuvam 0.5.6`.
+Capture from a real or emulator install of `ovayuvam 0.5.7`.
 
 Recommended screenshots:
 
@@ -11,7 +11,7 @@ Recommended screenshots:
 3. Map after a short walk or simulated location movement, showing strong fog and a strict revealed walking trail.
 4. A private goal pin on the map.
 5. Off-screen goal arrow.
-6. Info sheet showing privacy policy URL and clear-goal control.
+6. Info sheet showing privacy policy URL and encrypted export/import controls.
 
 Rules:
 

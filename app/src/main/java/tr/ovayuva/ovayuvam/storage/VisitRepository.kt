@@ -128,6 +128,17 @@ class VisitRepository(context: Context) {
 
     fun recentRevealCells(limit: Int = 4_000): List<RevealCell> = revealCells(limit)
 
+    fun allVisitedCells(): List<VisitedCell> = cells(Int.MAX_VALUE)
+
+    fun allRevealCells(): List<RevealCell> = revealCells(Int.MAX_VALUE)
+
+    fun importCells(visitedCells: List<VisitedCell>, revealCells: List<RevealCell>) {
+        db.writableDatabase.transaction {
+            visitedCells.forEach { cell -> importCell(cell) }
+            revealCells.forEach { cell -> importRevealCell(cell) }
+        }
+    }
+
     fun clearAll() {
         db.writableDatabase.transaction {
             delete("visited_cells", null, null)
@@ -200,6 +211,71 @@ class VisitRepository(context: Context) {
         ).use { cursor ->
             return if (cursor.moveToFirst()) cursor.getInt(0) else 0
         }
+    }
+
+    private fun SQLiteDatabase.importCell(cell: VisitedCell) {
+        rawQuery(
+            "SELECT first_seen_ms, last_seen_ms, samples FROM visited_cells WHERE cell_x = ? AND cell_y = ?",
+            arrayOf(cell.x.toString(), cell.y.toString()),
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                update(
+                    "visited_cells",
+                    ContentValues().apply {
+                        put("first_seen_ms", minOf(cursor.getLong(0), cell.firstSeenMs))
+                        put("last_seen_ms", maxOf(cursor.getLong(1), cell.lastSeenMs))
+                        put("samples", maxOf(cursor.getInt(2), cell.samples))
+                    },
+                    "cell_x = ? AND cell_y = ?",
+                    arrayOf(cell.x.toString(), cell.y.toString()),
+                )
+                return
+            }
+        }
+        insert(
+            "visited_cells",
+            null,
+            ContentValues().apply {
+                put("cell_x", cell.x)
+                put("cell_y", cell.y)
+                put("first_seen_ms", cell.firstSeenMs)
+                put("last_seen_ms", cell.lastSeenMs)
+                put("samples", cell.samples)
+            },
+        )
+    }
+
+    private fun SQLiteDatabase.importRevealCell(cell: RevealCell) {
+        rawQuery(
+            "SELECT first_seen_ms, last_seen_ms, samples FROM reveal_cells WHERE cell_x = ? AND cell_y = ? AND kind = ?",
+            arrayOf(cell.x.toString(), cell.y.toString(), cell.kind.id.toString()),
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                update(
+                    "reveal_cells",
+                    ContentValues().apply {
+                        put("first_seen_ms", minOf(cursor.getLong(0), cell.firstSeenMs))
+                        put("last_seen_ms", maxOf(cursor.getLong(1), cell.lastSeenMs))
+                        put("samples", maxOf(cursor.getInt(2), cell.samples))
+                    },
+                    "cell_x = ? AND cell_y = ? AND kind = ?",
+                    arrayOf(cell.x.toString(), cell.y.toString(), cell.kind.id.toString()),
+                )
+                return
+            }
+        }
+        insert(
+            "reveal_cells",
+            null,
+            ContentValues().apply {
+                put("cell_x", cell.x)
+                put("cell_y", cell.y)
+                put("kind", cell.kind.id)
+                put("first_seen_ms", cell.firstSeenMs)
+                put("last_seen_ms", cell.lastSeenMs)
+                put("samples", cell.samples)
+            },
+        )
     }
 }
 

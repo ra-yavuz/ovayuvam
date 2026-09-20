@@ -11,7 +11,7 @@
 - Fog-grid storage in SQLite.
 - Full-screen local fog map with strong fog, circular reveal trails and wide zoom.
 - Private local goal pin with an off-screen direction arrow.
-- Local delete.
+- Manual encrypted export/import.
 - Public page at `ovayuva.tr/yuvam/`.
 
 ## Phase 2: private backup
@@ -19,9 +19,7 @@
 - Optional Google Drive app data folder backup.
 - On-device backup encryption before upload.
 - Restore flow for a new phone.
-- Manual encrypted export.
-- Manual encrypted import.
-- Wrong-key and damaged-backup checks.
+- Better backup status and damaged-backup checks.
 
 ## Phase 3: offline map
 

@@ -26,6 +26,7 @@ contains:
 - Strict fog-of-war reveal at every zoom level, without country-scale aggregation.
 - A private goal pin with an off-screen direction arrow.
 - Automatic visible location tracking after permission is granted.
+- Manual encrypted export/import from the info sheet.
 - A small info sheet with privacy, contact, and legal details.
 - Ovayuva-style hand-drawn colors, fonts, and map controls.
 - A draft public page for `https://ovayuva.tr/yuvam/` under `web/yuvam/`.
@@ -33,22 +34,26 @@ contains:
 
 ## Download
 
-Current APK release: `0.5.6`.
+Current APK release: `0.5.7`.
 
-- Download: [ovayuvam-0.5.6.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.6/ovayuvam-0.5.6.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.6.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.6.apk)
+- Download: [ovayuvam-0.5.7.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.7/ovayuvam-0.5.7.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.7.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.7.apk)
 - Package: `tr.ovayuva.ovayuvam`
-- Size: `44,527,323` bytes
-- SHA-256: `69090f199bb28016e5e5f5857031da441dc17302c3ac8e2efcb873e467356618`
+- Size: `44,773,083` bytes
+- SHA-256: `060d730a499ca1bf9554ad257ace7ce926863eefdd91c805646debe9977c4c9d`
 
 Google Play Console uploads should use the signed Android App Bundle:
 
-- Bundle: `release/ovayuvam-0.5.6.aab`
-- Bundle SHA-256: `61da7b7b381f92a7e276ca324f14883ccc29350ea670f166c2122fa2064dbbc6`
+- Bundle: `release/ovayuvam-0.5.7.aab`
+- Bundle SHA-256: `5360c06515f6d5737e3f2e9747c92f35bc6a402644773f8a0ab4f90e98108fdc`
 
-Version 0.5.6 does not paint road/path reveal just because the map opens. The
+Version 0.5.7 does not paint road/path reveal just because the map opens. The
 first visible position after opening only seeds the road tracker. Nearby road and
 path reveal cells are added after fresh movement while the map is open.
+
+Version 0.5.7 also adds manual encrypted export/import. The backup file includes
+revealed cells and the optional goal pin. It is encrypted with a passphrase chosen
+by the user. ovayuvam cannot recover that passphrase.
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent
@@ -63,7 +68,6 @@ from there.
 - No friend groups.
 - No shared world upload.
 - No ovayuva map backend. The basemap is loaded from OpenFreeMap/OpenStreetMap.
-- No export or import UI in this simple first map release.
 - No automatic Google Drive upload.
 - No Google Play developer-account submission or review approval yet.
 

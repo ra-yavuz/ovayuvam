@@ -1,6 +1,6 @@
 # Permissions and sensitive access
 
-## Declared Android permissions in 0.5.6
+## Declared Android permissions in 0.5.7
 
 - `android.permission.INTERNET`
 - `android.permission.ACCESS_COARSE_LOCATION`

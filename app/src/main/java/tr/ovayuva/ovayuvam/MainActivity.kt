@@ -27,8 +27,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -57,6 +60,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -77,6 +81,8 @@ import org.maplibre.geojson.Geometry
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.MultiLineString
 import org.maplibre.geojson.Point
+import tr.ovayuva.ovayuvam.backup.WorldBackup
+import tr.ovayuva.ovayuvam.backup.WorldBackupCodec
 import tr.ovayuva.ovayuvam.domain.GeoPosition
 import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.VisitedCell
@@ -156,6 +162,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     var infoOpen by remember { mutableStateOf(false) }
     var recenterRequest by remember { mutableIntStateOf(0) }
     var following by remember { mutableStateOf(true) }
+    var backupPassphrase by remember { mutableStateOf("") }
 
     fun refresh() {
         cells = repository.recentCells(4_000)
@@ -187,6 +194,43 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         if (hasLocation) startTracking() else status = "Location permission is needed to reveal the map."
     }
 
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        try {
+            val backup = WorldBackup(
+                visitedCells = repository.allVisitedCells(),
+                revealCells = repository.allRevealCells(),
+                goal = goal,
+            )
+            val bytes = WorldBackupCodec.encrypt(backup, backupPassphrase)
+            val output = context.contentResolver.openOutputStream(uri)
+                ?: error("Could not open the selected export file.")
+            output.use { it.write(bytes) }
+            status = "Encrypted world exported"
+        } catch (error: Exception) {
+            status = "Export failed: ${error.userMessage()}"
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        try {
+            val input = context.contentResolver.openInputStream(uri)
+                ?: error("Could not open the selected backup file.")
+            val backup = input.use { WorldBackupCodec.decrypt(it.readBytes(), backupPassphrase) }
+            repository.importCells(backup.visitedCells, backup.revealCells)
+            backup.goal?.let { importedGoal -> goalState.setGoal(importedGoal.position, importedGoal.createdMs) }
+            refresh()
+            status = "Encrypted world imported"
+        } catch (error: Exception) {
+            status = "Import failed: ${error.userMessage()}"
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (hasLocationPermission(context)) {
             startTracking()
@@ -209,6 +253,22 @@ private fun OvayuvamScreen(repository: VisitRepository) {
             onClearGoal = {
                 goalState.clearGoal()
                 goal = null
+            },
+            backupPassphrase = backupPassphrase,
+            onBackupPassphraseChange = { backupPassphrase = it },
+            onExportWorld = {
+                if (backupPassphrase.length < WorldBackupCodec.MinPassphraseLength) {
+                    status = "Use at least ${WorldBackupCodec.MinPassphraseLength} characters for the backup passphrase."
+                } else {
+                    exportLauncher.launch("ovayuvam-world-${System.currentTimeMillis()}.ovayuvam")
+                }
+            },
+            onImportWorld = {
+                if (backupPassphrase.length < WorldBackupCodec.MinPassphraseLength) {
+                    status = "Use at least ${WorldBackupCodec.MinPassphraseLength} characters for the backup passphrase."
+                } else {
+                    importLauncher.launch(arrayOf("application/octet-stream", "application/json", "*/*"))
+                }
             },
             onDismiss = { infoOpen = false },
         )
@@ -386,13 +446,17 @@ private fun InfoDialog(
     tracking: Boolean,
     goal: GoalPin?,
     onClearGoal: () -> Unit,
+    backupPassphrase: String,
+    onBackupPassphraseChange: (String) -> Unit,
+    onExportWorld: () -> Unit,
+    onImportWorld: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("ovayuvam") },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("Your own world starts immediately after location permission is granted.")
                 Spacer(Modifier.height(10.dp))
                 Text("Long-press the map to place a private goal pin. If the pin is off screen, the arrow points toward it.")
@@ -400,6 +464,30 @@ private fun InfoDialog(
                 Text("The visible map uses OpenFreeMap tiles. Your revealed world is stored as local cells on this phone. There is no ovayuva account, no ads, and no ovayuva backend.")
                 Spacer(Modifier.height(10.dp))
                 Text(if (tracking) "Tracking is on and shown by a notification." else "Tracking is waiting for location access.")
+                Spacer(Modifier.height(10.dp))
+                Text("Encrypted backup")
+                Spacer(Modifier.height(6.dp))
+                Text("Export saves your revealed world and goal pin to an encrypted file. Keep the passphrase. It is needed after reinstall, and ovayuvam cannot recover it.")
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = backupPassphrase,
+                    onValueChange = onBackupPassphraseChange,
+                    label = { Text("Backup passphrase") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    supportingText = { Text("Use at least ${WorldBackupCodec.MinPassphraseLength} characters.") },
+                )
+                Spacer(Modifier.height(6.dp))
+                Row {
+                    TextButton(
+                        onClick = onExportWorld,
+                        enabled = backupPassphrase.length >= WorldBackupCodec.MinPassphraseLength,
+                    ) { Text("Export world") }
+                    TextButton(
+                        onClick = onImportWorld,
+                        enabled = backupPassphrase.length >= WorldBackupCodec.MinPassphraseLength,
+                    ) { Text("Import world") }
+                }
                 Spacer(Modifier.height(10.dp))
                 Text("Privacy policy: https://ovayuva.tr/yuvam/privacy/")
                 Spacer(Modifier.height(10.dp))
@@ -919,3 +1007,5 @@ private fun isDeviceLocationEnabled(context: Context): Boolean {
             runCatching { locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) }.getOrDefault(false)
     }
 }
+
+private fun Exception.userMessage(): String = message?.takeIf { it.isNotBlank() } ?: "Check the file and passphrase."

@@ -60,3 +60,5 @@ Answer: `No account creation`.
 
 ovayuvam has no account system. Local data can be removed by uninstalling the app or clearing app data in Android settings.
 
+If the user creates an encrypted export file, that file is outside app storage and
+must be deleted by the user wherever they saved it.

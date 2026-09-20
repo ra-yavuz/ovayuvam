@@ -20,13 +20,15 @@ The local database stores grid cells, first seen time, last seen time, and sampl
 count. It does not store raw route uploads. This still counts as sensitive
 location history because repeated cells can reveal routines.
 
-Android cloud backup and device transfer are disabled for version 1. Version 0.5.6
-does not include export or import UI. Later Google Drive backup should be explicit,
-encrypted, user-started, and restorable without an ovayuva server.
+Android cloud backup and device transfer are disabled for version 1. Version 0.5.7
+includes manual encrypted export/import. The file contains visited cells, reveal
+cells and the optional goal pin, encrypted with a user passphrase using
+PBKDF2WithHmacSHA256 and AES-256-GCM. Later Google Drive backup should be
+explicit, encrypted, user-started, and restorable without an ovayuva server.
 
 ## Map approach
 
-Version 0.5.6 uses MapLibre with OpenFreeMap vector tiles styled in the Ovayuva
+Version 0.5.7 uses MapLibre with OpenFreeMap vector tiles styled in the Ovayuva
 paper-and-ink direction. A heavy fog overlay sits above the real map and clears a
 soft circular radius as the user walks. The visible trail is meant to feel like
 brushing fog from paper, not like square tile chunks.
