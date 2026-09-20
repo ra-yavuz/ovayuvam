@@ -22,6 +22,7 @@ contains:
 - A heavier fog overlay that hides unexplored map areas.
 - Soft circular reveal trails over the real map.
 - Smoother trail recording that filters poor fixes and fills gaps between good GPS points.
+- Zoomed-out familiarity islands, so explored places read as soft regions instead of thin scratches.
 - A private goal pin with an off-screen direction arrow.
 - Automatic visible location tracking after permission is granted.
 - A small info sheet with privacy, contact, and legal details.
@@ -31,18 +32,18 @@ contains:
 
 ## Download
 
-Current APK release: `0.5.1`.
+Current APK release: `0.5.2`.
 
-- Download: [ovayuvam-0.5.1.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.1/ovayuvam-0.5.1.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.1.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.1.apk)
+- Download: [ovayuvam-0.5.2.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.2/ovayuvam-0.5.2.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.2.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.2.apk)
 - Package: `tr.ovayuva.ovayuvam`
-- Size: `44,510,939` bytes
-- SHA-256: `0ebcbad9ebb0673f8e9934a116ad823721d62ce77a56f1664392329f2588183f`
+- Size: `44,527,323` bytes
+- SHA-256: `a015dd6f288beedfeed1d6929ddea88fc862bef92510428358531f14ed3e4515`
 
 Google Play Console uploads should use the signed Android App Bundle:
 
-- Bundle: `release/ovayuvam-0.5.1.aab`
-- Bundle SHA-256: `63af1cedf39e9dd318b1a9e5bc1743c4c3a0e3354cb20f79274642b25a29a5aa`
+- Bundle: `release/ovayuvam-0.5.2.aab`
+- Bundle SHA-256: `e2b02154911d6ecd06a7e20d059ae3bde9ee5c8fd383f6ed1c26b774be91d9fd`
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent
