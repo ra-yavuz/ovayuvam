@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
 }
 
 private const val InitialZoom = 15.6
-private const val RevealRadiusCells = 3.2
+private const val RevealRadiusCells = 0.75
 private const val RevealRadiusMeters = WorldCell.DefaultCellSizeMeters * RevealRadiusCells
 private const val EarthRadiusMeters = 6_378_137.0
 
@@ -127,7 +127,6 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     var tracking by remember { mutableStateOf(trackingState.isTracking()) }
     var status by remember { mutableStateOf("Revealing your world") }
     var infoOpen by remember { mutableStateOf(false) }
-    var clearOpen by remember { mutableStateOf(false) }
     var recenterRequest by remember { mutableIntStateOf(0) }
     var following by remember { mutableStateOf(true) }
 
@@ -178,32 +177,6 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         InfoDialog(
             tracking = tracking,
             onDismiss = { infoOpen = false },
-            onClear = {
-                infoOpen = false
-                clearOpen = true
-            },
-        )
-    }
-
-    if (clearOpen) {
-        AlertDialog(
-            onDismissRequest = { clearOpen = false },
-            title = { Text("Clear local world?") },
-            text = { Text("This removes every revealed cell stored by ovayuvam on this phone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        repository.clearAll()
-                        trackingState.clearCurrentCell()
-                        clearOpen = false
-                        refresh()
-                        status = "Local world cleared"
-                    },
-                ) { Text("Clear") }
-            },
-            dismissButton = {
-                TextButton(onClick = { clearOpen = false }) { Text("Cancel") }
-            },
         )
     }
 
@@ -365,7 +338,7 @@ private fun MapIconButton(
 }
 
 @Composable
-private fun InfoDialog(tracking: Boolean, onDismiss: () -> Unit, onClear: () -> Unit) {
+private fun InfoDialog(tracking: Boolean, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("ovayuvam") },
@@ -382,9 +355,6 @@ private fun InfoDialog(tracking: Boolean, onDismiss: () -> Unit, onClear: () -> 
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
-        },
-        dismissButton = {
-            TextButton(onClick = onClear) { Text("Clear local world") }
         },
     )
 }

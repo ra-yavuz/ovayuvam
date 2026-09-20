@@ -70,7 +70,7 @@ class LocationTrailService : Service() {
         val next = object : LocationListener {
             override fun onLocationChanged(location: Location) {
                 val cell = WorldCell.fromLocation(location.latitude, location.longitude)
-                repository.recordVisitArea(cell, System.currentTimeMillis(), radiusCells = 2)
+                repository.recordVisitArea(cell, System.currentTimeMillis(), radiusCells = 0)
                 trackingState.setCurrentLocation(location.latitude, location.longitude, cell)
             }
 

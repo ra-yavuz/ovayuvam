@@ -21,20 +21,20 @@ contains:
 - A full-screen MapLibre map with Ovayuva-style paper-and-ink OpenFreeMap tiles.
 - A fog overlay that clears soft circular reveal trails over the real map.
 - Automatic visible location tracking after permission is granted.
-- A small info sheet with privacy, contact, and local-clear controls.
+- A small info sheet with privacy, contact, and legal details.
 - Ovayuva-style hand-drawn colors, fonts, and map controls.
 - A draft public page for `https://ovayuva.tr/yuvam/` under `web/yuvam/`.
 - Product, privacy, architecture, and roadmap notes under `docs/`.
 
 ## Download
 
-Current APK release: `0.4.0`.
+Current APK release: `0.4.1`.
 
-- Download: [ovayuvam-0.4.0.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.4.0/ovayuvam-0.4.0.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.4.0.apk](https://ovayuva.tr/yuvam/ovayuvam-0.4.0.apk)
+- Download: [ovayuvam-0.4.1.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.4.1/ovayuvam-0.4.1.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.4.1.apk](https://ovayuva.tr/yuvam/ovayuvam-0.4.1.apk)
 - Package: `tr.ovayuva.ovayuvam`
 - Size: `44,358,823` bytes
-- SHA-256: `8d4ad2426c3ac57a7f7bb0f82d886fa7baf40aaba909fd93b33d4cb75b1cabef`
+- SHA-256: `5ed2eeb3d38e678458dc5aa14c9c3afb3b35511b5eb207e8ec8d2717125b5859`
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent

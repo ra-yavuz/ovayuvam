@@ -21,7 +21,7 @@ Version 1 is a private fog-of-war map:
 - Walk, travel, or explore.
 - See the full-screen real map clear in a soft radius where you have walked.
 - Keep the data on the device.
-- Use the small info button for privacy, contact, and local-clear controls.
+- Use the small info button for privacy, contact, and legal details.
 - Do not create an account.
 - Do not publish anything.
 

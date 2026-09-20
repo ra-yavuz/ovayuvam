@@ -2,11 +2,11 @@
 
 ## Current release
 
-- Version: `0.4.0`
+- Version: `0.4.1`
 - Package: `tr.ovayuva.ovayuvam`
-- APK: `ovayuvam-0.4.0.apk`
+- APK: `ovayuvam-0.4.1.apk`
 - Size: `44,358,823` bytes
-- SHA-256: `8d4ad2426c3ac57a7f7bb0f82d886fa7baf40aaba909fd93b33d4cb75b1cabef`
+- SHA-256: `5ed2eeb3d38e678458dc5aa14c9c3afb3b35511b5eb207e8ec8d2717125b5859`
 - Signing certificate SHA-256: `41a682a94ae3098fb09bf3e984be9c591f3093329618d057a59b3f922719873e`
 
 ## Verified
@@ -14,13 +14,13 @@
 - Clean release build passed with `./gradlew clean testDebugUnitTest assembleRelease`.
 - Android release lint passed.
 - APK signature verification passed.
-- APK version is `versionCode=5` and `versionName=0.4.0`.
+- APK version is `versionCode=6` and `versionName=0.4.1`.
 - APK asks for internet and network-state permissions for OpenFreeMap/OpenStreetMap map tiles.
 - APK asks for location, foreground-service, notification, and AndroidX internal receiver permissions.
 - APK does not declare `android.permission.ACCESS_WIFI_STATE`.
 - Android automatic backup is disabled in the manifest and backup rule files.
 - The map view uses MapLibre with OpenFreeMap vector tiles.
-- The reveal view uses a circular paintbrush-style radius over the real map, not square visual chunks.
+- The reveal view uses a smaller circular paintbrush-style radius over the real map, not square visual chunks.
 - Map zoom supports a wide inspection range while keeping the reveal radius tied to world cells.
 
 ## V1 boundary
@@ -34,7 +34,7 @@ are stored locally as grid cells on the phone. On launch, it requests the needed
 permissions and starts visible location tracking as soon as permission and Android
 Location are available.
 
-There is no export or import UI in version 0.4.0. Later backup work must be an
+There is no export or import UI in version 0.4.1. Later backup work must be an
 explicit product decision.
 
 ## Not included yet
@@ -55,7 +55,7 @@ fine location permission before the service starts. See Android foreground servi
 types: https://developer.android.com/develop/background-work/services/fgs/service-types
 
 Android 10 and newer use `ACCESS_BACKGROUND_LOCATION` for background location
-access. This app does not declare that permission in version 0.4.0. See Android
+access. This app does not declare that permission in version 0.4.1. See Android
 location permissions: https://developer.android.com/develop/sensors-and-location/location/permissions
 
 Real map tiles require network access. The app uses OpenFreeMap/OpenMapTiles/
