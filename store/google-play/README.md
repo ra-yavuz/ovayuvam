@@ -6,12 +6,12 @@ Current candidate:
 
 - App name: `ovayuvam`
 - Package name: `tr.ovayuva.ovayuvam`
-- Version: `0.4.3`
-- Version code: `8`
-- Play upload artifact: `release/ovayuvam-0.4.3.aab`
-- AAB SHA-256: `22dd58fa9d7a99fe46d13f9db6dcf889611888f8595e246ceb785407b3a58e2b`
-- APK mirror artifact: `release/ovayuvam-0.4.3.apk`
-- APK SHA-256: `9ddf501d2a3ffae86207eff6d0273600bc01a9a62e63365881d47240c9a92f7a`
+- Version: `0.5.0`
+- Version code: `9`
+- Play upload artifact: `release/ovayuvam-0.5.0.aab`
+- AAB SHA-256: `6776e37dd7df9630ebe0c1390d0630fe4ecce3017207bee71e2b1c47220fbe52`
+- APK mirror artifact: `release/ovayuvam-0.5.0.apk`
+- APK SHA-256: `dd59092ab08238ed3fe8fe25c312c1501d17e5895ac733671a43e77e87fea43e`
 - Privacy policy URL: `https://ovayuva.tr/yuvam/privacy/`
 - Public app page: `https://ovayuva.tr/yuvam/`
 
@@ -41,4 +41,3 @@ References checked on 20 September 2026:
 - Android App Bundle requirement: https://support.google.com/googleplay/android-developer/answer/9844679
 - Preview asset guidance: https://support.google.com/googleplay/android-developer/answer/9866151
 - Background location guidance: https://support.google.com/googleplay/android-developer/answer/9799150
-

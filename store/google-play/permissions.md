@@ -1,6 +1,6 @@
 # Permissions and sensitive access
 
-## Declared Android permissions in 0.4.3
+## Declared Android permissions in 0.5.0
 
 - `android.permission.INTERNET`
 - `android.permission.ACCESS_COARSE_LOCATION`
@@ -54,4 +54,3 @@ If Play Console asks about background location, use this answer:
 Short disclosure:
 
 `ovayuvam uses location to reveal the map where you walk. Tracking is visible through an Android notification. Your revealed world is stored locally on your phone.`
-

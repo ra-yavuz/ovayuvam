@@ -8,13 +8,15 @@ The title is under Google Play's 30-character app-title limit.
 
 ## Short description
 
-A private fog-of-war map that reveals the places you walk.
+A private fog-of-war map that hides the unexplored world.
 
 ## Full description
 
 ovayuvam is a simple fog-of-war map for your own life.
 
-Open the app, allow location, and walk. The real map starts covered and gently clears where you have been. It is a quiet way to see your own explored world over time.
+Open the app, allow location, and walk. The real map starts hidden under fog and clears where you have been. It is a quiet way to see your own explored world over time, and a small nudge to find new routes.
+
+Long-press the map to set a private goal pin. If the goal is outside the visible map, an arrow points toward it.
 
 Privacy is the default shape:
 
@@ -25,7 +27,7 @@ Privacy is the default shape:
 - No friend sharing in this first release.
 - Android cloud backup is disabled.
 
-The map uses OpenFreeMap and OpenStreetMap-based map tiles, so the app needs internet access for the visible basemap. Your revealed-world cells stay in local app storage on your phone.
+The map uses OpenFreeMap and OpenStreetMap-based map tiles, so the app needs internet access for the visible basemap. Your revealed-world cells and optional goal pin stay in local app storage on your phone.
 
 Location use is visible. ovayuvam starts tracking after Android location permission is granted and shows an Android notification while tracking is active.
 
@@ -52,4 +54,3 @@ Possible tags:
 - Website: `https://ovayuva.tr/yuvam/`
 - Privacy policy: `https://ovayuva.tr/yuvam/privacy/`
 - Email: `contact@tangelo.com.tr`
-

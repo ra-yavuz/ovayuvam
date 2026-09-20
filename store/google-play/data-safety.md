@@ -2,6 +2,9 @@
 
 Google Play defines "collect" as transmitting user data off the user's device. It says local-only processing does not need to be disclosed as collected. The app still stores sensitive location-derived data locally, so keep the privacy policy explicit.
 
+Version 0.5.0 also stores an optional local goal pin if the user long-presses the
+map. That pin is local app data and is not sent to an ovayuva backend.
+
 ## High-level answers
 
 - Does the app collect or share user data? Conservative answer: `Yes`.
@@ -61,4 +64,3 @@ Those requests are part of app functionality. They are not used for ads, analyti
 - Users can request data deletion: `No server data exists for ovayuvam. Users can delete local data by uninstalling the app or clearing app data.`
 - Independent security review: `No`.
 - Committed to Play Families Policy: `No`, unless the target audience is later changed to include children.
-

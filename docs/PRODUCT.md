@@ -20,13 +20,16 @@ Version 1 is a private fog-of-war map:
 - Grant location permission.
 - Walk, travel, or explore.
 - See the full-screen real map clear in a soft radius where you have walked.
+- Let the fog hide unexplored streets strongly enough to invite new routes.
+- Long-press the map to place a private goal pin.
+- Follow the edge arrow when the goal pin is outside the visible map.
 - Keep the data on the device.
 - Use the small info button for privacy, contact, and legal details.
 - Do not create an account.
 - Do not publish anything.
 
-The reveal should feel like a paintbrush trail through fog. It should not expose
-the world as square chunks.
+The reveal should feel like a paintbrush trail through real fog. It should not
+leave the unexplored map readable, and it should not expose the world as square chunks.
 
 The basemap uses OpenFreeMap/OpenStreetMap tiles. The user's revealed world remains
 local to the phone unless a future opt-in backup or sharing feature is added.

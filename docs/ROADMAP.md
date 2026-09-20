@@ -9,7 +9,8 @@
 - Internet permission only for map tiles.
 - Automatic visible location tracking after permission is granted.
 - Fog-grid storage in SQLite.
-- Full-screen local fog map with circular reveal trails and wide zoom.
+- Full-screen local fog map with strong fog, circular reveal trails and wide zoom.
+- Private local goal pin with an off-screen direction arrow.
 - Local delete.
 - Public page at `ovayuva.tr/yuvam/`.
 

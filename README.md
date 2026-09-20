@@ -19,7 +19,9 @@ contains:
 - A standalone Android project under `app/`.
 - A local SQLite store for visited fog-grid cells.
 - A full-screen MapLibre map with Ovayuva-style paper-and-ink OpenFreeMap tiles.
-- A fog overlay that clears soft circular reveal trails over the real map.
+- A heavier fog overlay that hides unexplored map areas.
+- Soft circular reveal trails over the real map.
+- A private goal pin with an off-screen direction arrow.
 - Automatic visible location tracking after permission is granted.
 - A small info sheet with privacy, contact, and legal details.
 - Ovayuva-style hand-drawn colors, fonts, and map controls.
@@ -28,18 +30,18 @@ contains:
 
 ## Download
 
-Current APK release: `0.4.3`.
+Current APK release: `0.5.0`.
 
-- Download: [ovayuvam-0.4.3.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.4.3/ovayuvam-0.4.3.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.4.3.apk](https://ovayuva.tr/yuvam/ovayuvam-0.4.3.apk)
+- Download: [ovayuvam-0.5.0.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.0/ovayuvam-0.5.0.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.0.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.0.apk)
 - Package: `tr.ovayuva.ovayuvam`
 - Size: `44,510,939` bytes
-- SHA-256: `9ddf501d2a3ffae86207eff6d0273600bc01a9a62e63365881d47240c9a92f7a`
+- SHA-256: `dd59092ab08238ed3fe8fe25c312c1501d17e5895ac733671a43e77e87fea43e`
 
 Google Play Console uploads should use the signed Android App Bundle:
 
-- Bundle: `release/ovayuvam-0.4.3.aab`
-- Bundle SHA-256: `22dd58fa9d7a99fe46d13f9db6dcf889611888f8595e246ceb785407b3a58e2b`
+- Bundle: `release/ovayuvam-0.5.0.aab`
+- Bundle SHA-256: `6776e37dd7df9630ebe0c1390d0630fe4ecce3017207bee71e2b1c47220fbe52`
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent
