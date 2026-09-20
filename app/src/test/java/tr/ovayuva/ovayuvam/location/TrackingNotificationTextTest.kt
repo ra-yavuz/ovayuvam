@@ -10,11 +10,11 @@ class TrackingNotificationTextTest {
     private val zone = ZoneId.of("Europe/Istanbul")
 
     @Test
-    fun eveningTextSummarizesToday() {
+    fun eveningTextSummarizesTodayDistance() {
         val now = LocalDateTime.of(2026, 9, 20, 21, 15).atZone(zone).toInstant().toEpochMilli()
         val text = TrackingNotificationText.text(
             TrackingNotificationStats(
-                todayRevealedSquareMeters = 12_400L,
+                todayHasProgress = true,
                 todayDistanceMeters = 1_650f,
                 lastProgressMs = now,
                 nowMs = now,
@@ -22,7 +22,23 @@ class TrackingNotificationTextTest {
             zone,
         )
 
-        assertEquals("Today you cleared about 1.2 ha and walked 1.7 km.", text)
+        assertEquals("Today you walked about 1.7 km through the fog.", text)
+    }
+
+    @Test
+    fun eveningTextAvoidsInflatedAreaForSmallWalks() {
+        val now = LocalDateTime.of(2026, 9, 20, 21, 15).atZone(zone).toInstant().toEpochMilli()
+        val text = TrackingNotificationText.text(
+            TrackingNotificationStats(
+                todayHasProgress = true,
+                todayDistanceMeters = 42f,
+                lastProgressMs = now,
+                nowMs = now,
+            ),
+            zone,
+        )
+
+        assertEquals("A little more of your world is visible today.", text)
     }
 
     @Test
@@ -32,7 +48,7 @@ class TrackingNotificationTextTest {
 
         val text = TrackingNotificationText.text(
             TrackingNotificationStats(
-                todayRevealedSquareMeters = 0L,
+                todayHasProgress = false,
                 todayDistanceMeters = 0f,
                 lastProgressMs = fourDaysAgo,
                 nowMs = now,
@@ -49,7 +65,7 @@ class TrackingNotificationTextTest {
 
         val text = TrackingNotificationText.text(
             TrackingNotificationStats(
-                todayRevealedSquareMeters = 400L,
+                todayHasProgress = true,
                 todayDistanceMeters = 40f,
                 lastProgressMs = now,
                 nowMs = now,

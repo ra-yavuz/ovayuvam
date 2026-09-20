@@ -265,11 +265,10 @@ class LocationTrailService : Service() {
             .toEpochMilli()
         val progress = progressStore.snapshot(nowMs)
         val lastProgressMs = listOfNotNull(progress.lastProgressMs, repository.lastRevealSeenMs()).maxOrNull()
-        val todayArea = repository.revealedCellCountSince(todayStartMs) *
-            (WorldCell.RevealCellSizeMeters * WorldCell.RevealCellSizeMeters).toLong()
+        val todayHasProgress = repository.revealedCellCountSince(todayStartMs) > 0
         return TrackingNotificationText.text(
             TrackingNotificationStats(
-                todayRevealedSquareMeters = todayArea,
+                todayHasProgress = todayHasProgress,
                 todayDistanceMeters = progress.distanceMeters,
                 lastProgressMs = lastProgressMs,
                 nowMs = nowMs,

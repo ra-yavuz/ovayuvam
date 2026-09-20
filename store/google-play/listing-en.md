@@ -32,7 +32,7 @@ The map uses OpenFreeMap and OpenStreetMap-based map tiles, so the app needs int
 
 If you are changing phones or reinstalling, export an encrypted backup first and keep the passphrase. ovayuvam cannot recover it.
 
-Location use is visible. ovayuvam starts tracking after Android location permission is granted and shows an Android notification while tracking is active. That notification may show local progress, such as approximate cleared area or walking distance for today.
+Location use is visible. ovayuvam starts tracking after Android location permission is granted and shows an Android notification while tracking is active. That notification may show local progress, such as walking distance for today.
 
 Do not use ovayuvam for emergencies, safety, navigation, legal proof or important records. No warranty is provided.
 

@@ -6,7 +6,7 @@ import java.time.ZoneId
 import kotlin.math.roundToInt
 
 data class TrackingNotificationStats(
-    val todayRevealedSquareMeters: Long,
+    val todayHasProgress: Boolean,
     val todayDistanceMeters: Float,
     val lastProgressMs: Long?,
     val nowMs: Long,
@@ -23,12 +23,13 @@ object TrackingNotificationText {
             return "Let's expand your world map. Tap to reveal a new way."
         }
         val hour = LocalTime.ofInstant(Instant.ofEpochMilli(stats.nowMs), zoneId).hour
-        if (hour >= 19 && stats.todayRevealedSquareMeters > 0L) {
-            val area = formatArea(stats.todayRevealedSquareMeters)
+        if (hour >= 19 && stats.todayHasProgress) {
             return if (stats.todayDistanceMeters >= 1_000f) {
-                "Today you cleared about $area and walked ${formatDistance(stats.todayDistanceMeters)}."
+                "Today you walked about ${formatDistance(stats.todayDistanceMeters)} through the fog."
+            } else if (stats.todayDistanceMeters >= 100f) {
+                "Today you walked about ${formatDistance(stats.todayDistanceMeters)} through the fog."
             } else {
-                "Today you cleared about $area of the map."
+                "A little more of your world is visible today."
             }
         }
         return when (((stats.nowMs / RotationMs) % 3L).toInt()) {
@@ -37,14 +38,6 @@ object TrackingNotificationText {
             else -> "Walk a new way and reveal more of the map."
         }
     }
-
-    private fun formatArea(squareMeters: Long): String =
-        if (squareMeters >= 10_000L) {
-            val hectares = squareMeters / 10_000.0
-            "${oneDecimal(hectares)} ha"
-        } else {
-            "${squareMeters} m²"
-        }
 
     private fun formatDistance(meters: Float): String =
         if (meters >= 1_000f) {

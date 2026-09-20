@@ -1,6 +1,6 @@
 # Permissions and sensitive access
 
-## Declared Android permissions in 0.5.8
+## Declared Android permissions in 0.5.9
 
 - `android.permission.INTERNET`
 - `android.permission.ACCESS_COARSE_LOCATION`
@@ -32,7 +32,7 @@ Foreground service and foreground service location:
 Post notifications:
 
 - Needed on Android 13+ so the foreground-service notification can be shown.
-- The notification may show local progress text, such as approximate cleared area or walking distance for today.
+- The notification may show local progress text, such as walking distance for today.
 
 Access network state:
 
