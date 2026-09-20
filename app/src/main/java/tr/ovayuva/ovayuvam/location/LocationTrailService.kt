@@ -25,12 +25,14 @@ import tr.ovayuva.ovayuvam.MainActivity
 import tr.ovayuva.ovayuvam.R
 import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.storage.VisitRepository
+import kotlin.math.ceil
 
 class LocationTrailService : Service() {
     private lateinit var locationManager: LocationManager
     private lateinit var repository: VisitRepository
     private lateinit var trackingState: TrackingState
     private var listener: LocationListener? = null
+    private var lastAcceptedLocation: Location? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -69,9 +71,7 @@ class LocationTrailService : Service() {
         if (listener != null) return
         val next = object : LocationListener {
             override fun onLocationChanged(location: Location) {
-                val cell = WorldCell.fromLocation(location.latitude, location.longitude)
-                repository.recordVisitArea(cell, System.currentTimeMillis(), radiusCells = 0)
-                trackingState.setCurrentLocation(location.latitude, location.longitude, cell)
+                acceptLocation(location)
             }
 
             override fun onProviderDisabled(provider: String) = Unit
@@ -86,7 +86,7 @@ class LocationTrailService : Service() {
                 locationManager.requestLocationUpdates(
                     provider,
                     1_000L,
-                    2f,
+                    1f,
                     next,
                     Looper.getMainLooper(),
                 )
@@ -97,6 +97,7 @@ class LocationTrailService : Service() {
             listener = next
             activeProviders
                 .mapNotNull { provider -> runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull() }
+                .filter { it.isFreshEnoughForSeed(System.currentTimeMillis()) }
                 .maxByOrNull { it.time }
                 ?.let(next::onLocationChanged)
         } else {
@@ -108,8 +109,65 @@ class LocationTrailService : Service() {
     private fun stopTracking() {
         listener?.let(locationManager::removeUpdates)
         listener = null
+        lastAcceptedLocation = null
         trackingState.setTracking(false)
         stopForeground(STOP_FOREGROUND_REMOVE)
+    }
+
+    private fun acceptLocation(location: Location) {
+        val now = System.currentTimeMillis()
+        if (!location.isUsable(now)) return
+        val previous = lastAcceptedLocation
+        recordTrail(previous, location, now)
+        lastAcceptedLocation = Location(location)
+        val cell = location.toWorldCell()
+        trackingState.setCurrentLocation(location.latitude, location.longitude, cell)
+    }
+
+    private fun Location.isUsable(nowMs: Long): Boolean {
+        if (hasAccuracy() && accuracy > MaxAcceptedAccuracyMeters) return false
+        if (time > 0L && nowMs - time > MaxAcceptedAgeMs) return false
+        val previous = lastAcceptedLocation ?: return true
+        val elapsedSeconds = elapsedSecondsSince(previous)
+        if (elapsedSeconds <= 0.0) return true
+        val distance = previous.distanceTo(this)
+        if (distance < JumpFilterDistanceMeters) return true
+        val speedMetersPerSecond = distance / elapsedSeconds
+        val accuracySlack = previous.safeAccuracy() + safeAccuracy() + JumpAccuracySlackMeters
+        return speedMetersPerSecond <= MaxAcceptedJumpSpeedMetersPerSecond || distance <= accuracySlack
+    }
+
+    private fun Location.isFreshEnoughForSeed(nowMs: Long): Boolean =
+        time > 0L && nowMs - time <= LastKnownMaxAgeMs && (!hasAccuracy() || accuracy <= MaxAcceptedAccuracyMeters)
+
+    private fun recordTrail(previous: Location?, current: Location, seenMs: Long) {
+        if (previous == null || previous.distanceTo(current) > MaxInterpolatedTrailMeters) {
+            repository.recordVisitArea(current.toWorldCell(), seenMs, radiusCells = 0)
+            return
+        }
+        val distance = previous.distanceTo(current)
+        val steps = ceil(distance / TrailStepMeters).toInt().coerceIn(1, MaxInterpolatedPoints)
+        val visited = LinkedHashSet<WorldCell>()
+        for (index in 0..steps) {
+            val fraction = index.toDouble() / steps
+            val latitude = previous.latitude + (current.latitude - previous.latitude) * fraction
+            val longitude = previous.longitude + (current.longitude - previous.longitude) * fraction
+            visited += WorldCell.fromLocation(latitude, longitude)
+        }
+        visited.forEach { cell ->
+            repository.recordVisitArea(cell, seenMs, radiusCells = 0)
+        }
+    }
+
+    private fun Location.toWorldCell(): WorldCell = WorldCell.fromLocation(latitude, longitude)
+
+    private fun Location.safeAccuracy(): Float = if (hasAccuracy()) accuracy else DefaultAccuracyMeters
+
+    private fun Location.elapsedSecondsSince(previous: Location): Double {
+        val elapsedNanos = elapsedRealtimeNanos - previous.elapsedRealtimeNanos
+        if (elapsedNanos > 0L) return elapsedNanos / 1_000_000_000.0
+        val elapsedMillis = time - previous.time
+        return elapsedMillis / 1_000.0
     }
 
     private fun hasLocationPermission(): Boolean {
@@ -188,6 +246,16 @@ class LocationTrailService : Service() {
     companion object {
         private const val CHANNEL_ID = "location-tracking"
         private const val NOTIFICATION_ID = 1001
+        private const val MaxAcceptedAccuracyMeters = 75f
+        private const val DefaultAccuracyMeters = 50f
+        private const val MaxAcceptedAgeMs = 30_000L
+        private const val LastKnownMaxAgeMs = 120_000L
+        private const val JumpFilterDistanceMeters = 120f
+        private const val JumpAccuracySlackMeters = 90f
+        private const val MaxAcceptedJumpSpeedMetersPerSecond = 45f
+        private const val TrailStepMeters = 22f
+        private const val MaxInterpolatedTrailMeters = 2_000f
+        private const val MaxInterpolatedPoints = 96
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(

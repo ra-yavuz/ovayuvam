@@ -2,14 +2,14 @@
 
 ## Current release
 
-- Version: `0.5.0`
+- Version: `0.5.1`
 - Package: `tr.ovayuva.ovayuvam`
-- APK: `ovayuvam-0.5.0.apk`
+- APK: `ovayuvam-0.5.1.apk`
 - Size: `44,510,939` bytes
-- SHA-256: `dd59092ab08238ed3fe8fe25c312c1501d17e5895ac733671a43e77e87fea43e`
-- Play App Bundle: `ovayuvam-0.5.0.aab`
-- Bundle size: `17,781,997` bytes
-- Bundle SHA-256: `6776e37dd7df9630ebe0c1390d0630fe4ecce3017207bee71e2b1c47220fbe52`
+- SHA-256: `0ebcbad9ebb0673f8e9934a116ad823721d62ce77a56f1664392329f2588183f`
+- Play App Bundle: `ovayuvam-0.5.1.aab`
+- Bundle size: `17,783,920` bytes
+- Bundle SHA-256: `63af1cedf39e9dd318b1a9e5bc1743c4c3a0e3354cb20f79274642b25a29a5aa`
 - Signing certificate SHA-256: `41a682a94ae3098fb09bf3e984be9c591f3093329618d057a59b3f922719873e`
 
 ## Verified
@@ -17,7 +17,7 @@
 - Clean release build passed with `./gradlew clean testDebugUnitTest assembleRelease bundleRelease`.
 - Android release lint passed.
 - APK signature verification passed.
-- APK version is `versionCode=9` and `versionName=0.5.0`.
+- APK version is `versionCode=10` and `versionName=0.5.1`.
 - APK asks for internet and network-state permissions for OpenFreeMap/OpenStreetMap map tiles.
 - APK asks for location, foreground-service, notification, and AndroidX internal receiver permissions.
 - APK does not declare `android.permission.ACCESS_WIFI_STATE`.
@@ -25,6 +25,7 @@
 - The map view uses MapLibre with OpenFreeMap vector tiles.
 - The Android launcher foreground, themed launcher mask, and `/yuvam/` logo use the same folded map artwork as the map-view info button.
 - The reveal view uses a smaller circular paintbrush-style radius over a much stronger fog layer.
+- The location service filters stale or low-accuracy fixes, rejects implausible jumps, and interpolates between accepted fixes for a smoother walking trail.
 - Long-pressing the map stores a private local goal pin.
 - When the goal pin is off screen at normal exploration zoom, the app draws an edge arrow toward it.
 - Map zoom supports a wide inspection range while keeping the reveal radius tied to world cells.
@@ -40,7 +41,7 @@ are stored locally as grid cells on the phone. A goal pin, if set, is stored
 locally on the phone. On launch, it requests the needed permissions and starts
 visible location tracking as soon as permission and Android Location are available.
 
-There is no export or import UI in version 0.5.0. Later backup work must be an
+There is no export or import UI in version 0.5.1. Later backup work must be an
 explicit product decision.
 
 ## Not included yet
@@ -61,7 +62,7 @@ fine location permission before the service starts. See Android foreground servi
 types: https://developer.android.com/develop/background-work/services/fgs/service-types
 
 Android 10 and newer use `ACCESS_BACKGROUND_LOCATION` for background location
-access. This app does not declare that permission in version 0.5.0. See Android
+access. This app does not declare that permission in version 0.5.1. See Android
 location permissions: https://developer.android.com/develop/sensors-and-location/location/permissions
 
 Real map tiles require network access. The app uses OpenFreeMap/OpenMapTiles/

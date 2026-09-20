@@ -20,16 +20,22 @@ The local database stores grid cells, first seen time, last seen time, and sampl
 count. It does not store raw route uploads. This still counts as sensitive
 location history because repeated cells can reveal routines.
 
-Android cloud backup and device transfer are disabled for version 1. Version 0.5.0
+Android cloud backup and device transfer are disabled for version 1. Version 0.5.1
 does not include export or import UI. Later Google Drive backup should be explicit,
 encrypted, user-started, and restorable without an ovayuva server.
 
 ## Map approach
 
-Version 0.5.0 uses MapLibre with OpenFreeMap vector tiles styled in the Ovayuva
+Version 0.5.1 uses MapLibre with OpenFreeMap vector tiles styled in the Ovayuva
 paper-and-ink direction. A heavy fog overlay sits above the real map and clears a
 soft circular radius as the user walks. The visible trail is meant to feel like
 brushing fog from paper, not like square tile chunks.
+
+The foreground location service does not accept every raw Android fix. It ignores
+stale seed locations, drops low-accuracy fixes, rejects large implausible jumps, and
+fills the saved trail between accepted fixes. That keeps GPS glitches from clearing
+random fog islands and makes movement look less dotted without increasing the reveal
+radius.
 
 The optional goal pin is a local latitude and longitude stored in shared
 preferences. The pin is drawn above the fog. If it is off screen at normal
