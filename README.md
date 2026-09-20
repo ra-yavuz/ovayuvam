@@ -28,13 +28,13 @@ contains:
 
 ## Download
 
-Current APK release: `0.4.1`.
+Current APK release: `0.4.2`.
 
-- Download: [ovayuvam-0.4.1.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.4.1/ovayuvam-0.4.1.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.4.1.apk](https://ovayuva.tr/yuvam/ovayuvam-0.4.1.apk)
+- Download: [ovayuvam-0.4.2.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.4.2/ovayuvam-0.4.2.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.4.2.apk](https://ovayuva.tr/yuvam/ovayuvam-0.4.2.apk)
 - Package: `tr.ovayuva.ovayuvam`
-- Size: `44,358,823` bytes
-- SHA-256: `5ed2eeb3d38e678458dc5aa14c9c3afb3b35511b5eb207e8ec8d2717125b5859`
+- Size: `44,510,939` bytes
+- SHA-256: `2137dfee56a872a5796a67cc04ccbcf46ae48bb36768e307eb7518fd59178b53`
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent
