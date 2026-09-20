@@ -23,6 +23,7 @@ data class WorldCell(val x: Int, val y: Int) {
 
     companion object {
         const val DefaultCellSizeMeters = 75.0
+        const val RevealCellSizeMeters = 20.0
         private const val EarthRadiusM = 6_378_137.0
         private const val MaxMercatorLat = 85.05112878
 

@@ -23,6 +23,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import tr.ovayuva.ovayuvam.MainActivity
 import tr.ovayuva.ovayuvam.R
+import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.storage.VisitRepository
 import kotlin.math.ceil
@@ -143,23 +144,32 @@ class LocationTrailService : Service() {
     private fun recordTrail(previous: Location?, current: Location, seenMs: Long) {
         if (previous == null || previous.distanceTo(current) > MaxInterpolatedTrailMeters) {
             repository.recordVisitArea(current.toWorldCell(), seenMs, radiusCells = 0)
+            repository.recordRevealArea(current.toRevealCell(), RevealCell.Kind.Core, seenMs, radiusCells = 1)
             return
         }
         val distance = previous.distanceTo(current)
         val steps = ceil(distance / TrailStepMeters).toInt().coerceIn(1, MaxInterpolatedPoints)
         val visited = LinkedHashSet<WorldCell>()
+        val precise = LinkedHashSet<WorldCell>()
         for (index in 0..steps) {
             val fraction = index.toDouble() / steps
             val latitude = previous.latitude + (current.latitude - previous.latitude) * fraction
             val longitude = previous.longitude + (current.longitude - previous.longitude) * fraction
             visited += WorldCell.fromLocation(latitude, longitude)
+            precise += WorldCell.fromLocation(latitude, longitude, WorldCell.RevealCellSizeMeters)
         }
         visited.forEach { cell ->
             repository.recordVisitArea(cell, seenMs, radiusCells = 0)
         }
+        precise.forEach { cell ->
+            repository.recordRevealArea(cell, RevealCell.Kind.Core, seenMs, radiusCells = 1)
+        }
     }
 
     private fun Location.toWorldCell(): WorldCell = WorldCell.fromLocation(latitude, longitude)
+
+    private fun Location.toRevealCell(): WorldCell =
+        WorldCell.fromLocation(latitude, longitude, WorldCell.RevealCellSizeMeters)
 
     private fun Location.safeAccuracy(): Float = if (hasAccuracy()) accuracy else DefaultAccuracyMeters
 
@@ -253,7 +263,7 @@ class LocationTrailService : Service() {
         private const val JumpFilterDistanceMeters = 120f
         private const val JumpAccuracySlackMeters = 90f
         private const val MaxAcceptedJumpSpeedMetersPerSecond = 45f
-        private const val TrailStepMeters = 22f
+        private const val TrailStepMeters = 10f
         private const val MaxInterpolatedTrailMeters = 2_000f
         private const val MaxInterpolatedPoints = 96
 

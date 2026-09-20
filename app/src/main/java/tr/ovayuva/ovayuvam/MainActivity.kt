@@ -5,6 +5,7 @@ import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.RectF
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
@@ -72,7 +73,12 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import org.maplibre.geojson.Geometry
+import org.maplibre.geojson.LineString
+import org.maplibre.geojson.MultiLineString
+import org.maplibre.geojson.Point
 import tr.ovayuva.ovayuvam.domain.GeoPosition
+import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.VisitedCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.location.GoalPin
@@ -89,6 +95,7 @@ import tr.ovayuva.ovayuvam.ui.theme.Paper
 import tr.ovayuva.ovayuvam.ui.theme.sketchSurface
 import kotlin.math.abs
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
@@ -113,16 +120,24 @@ class MainActivity : ComponentActivity() {
 }
 
 private const val InitialZoom = 15.6
-private const val RevealRadiusCells = 0.75
-private const val RevealRadiusMeters = WorldCell.DefaultCellSizeMeters * RevealRadiusCells
+private const val CoreRevealRadiusMeters = 20.0
+private const val RoadRevealRadiusMeters = 11.0
+private const val LegacyRevealRadiusMeters = 20.0
+private const val RoadRevealReachMeters = 32.0
+private const val RoadQueryRadiusMeters = 38.0
+private const val RoadSampleStepMeters = 8.0
+private const val MaxRoadRevealCellsPerQuery = 180
 private const val EarthRadiusMeters = 6_378_137.0
 private const val GoalArrowMinZoom = 11.0
+private val RoadLayerIds = arrayOf("street-paper", "paths")
 
 private data class RevealMark(
-    val cell: WorldCell,
+    val seedX: Int,
+    val seedY: Int,
     val point: Offset,
     val radiusPx: Float,
     val samples: Int,
+    val kind: RevealCell.Kind,
 )
 
 @Composable
@@ -131,6 +146,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     val trackingState = remember { TrackingState(context) }
     val goalState = remember { GoalState(context) }
     var cells by remember { mutableStateOf(repository.recentCells(4_000)) }
+    var revealCells by remember { mutableStateOf(repository.recentRevealCells(8_000)) }
     var currentCell by remember { mutableStateOf(trackingState.currentCell()) }
     var currentPosition by remember { mutableStateOf(trackingState.currentPosition()) }
     var goal by remember { mutableStateOf(goalState.goal()) }
@@ -142,6 +158,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
 
     fun refresh() {
         cells = repository.recentCells(4_000)
+        revealCells = repository.recentRevealCells(8_000)
         currentCell = trackingState.currentCell()
         currentPosition = trackingState.currentPosition()
         goal = goalState.goal()
@@ -199,6 +216,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     Box(Modifier.fillMaxSize().background(Paper)) {
         FogWorldMap(
             cells = cells,
+            revealCells = revealCells,
             currentCell = currentCell,
             currentPosition = currentPosition,
             goal = goal,
@@ -208,6 +226,10 @@ private fun OvayuvamScreen(repository: VisitRepository) {
             onGoalSelected = { position ->
                 goal = goalState.setGoal(position)
                 status = "Goal set"
+            },
+            onRoadCellsObserved = { cells ->
+                repository.recordRevealCells(cells, RevealCell.Kind.Road)
+                revealCells = repository.recentRevealCells(8_000)
             },
             modifier = Modifier.fillMaxSize(),
         )
@@ -404,6 +426,7 @@ private fun InfoDialog(
 @Composable
 private fun FogWorldMap(
     cells: List<VisitedCell>,
+    revealCells: List<RevealCell>,
     currentCell: WorldCell?,
     currentPosition: GeoPosition?,
     goal: GoalPin?,
@@ -411,6 +434,7 @@ private fun FogWorldMap(
     recenterRequest: Int,
     onUserMovedMap: () -> Unit,
     onGoalSelected: (GeoPosition) -> Unit,
+    onRoadCellsObserved: (Set<WorldCell>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -428,6 +452,15 @@ private fun FogWorldMap(
         if (following) {
             val zoom = max(map.cameraPosition.zoom, InitialZoom)
             map.animateCamera(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), zoom), 650)
+        }
+    }
+
+    LaunchedEffect(activeMap, currentPosition) {
+        val map = activeMap ?: return@LaunchedEffect
+        val position = currentPosition ?: return@LaunchedEffect
+        val nearbyRoadCells = map.roadRevealCellsNear(position)
+        if (nearbyRoadCells.isNotEmpty()) {
+            onRoadCellsObserved(nearbyRoadCells)
         }
     }
 
@@ -482,6 +515,7 @@ private fun FogWorldMap(
         AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
         FogRevealOverlay(
             cells = cells,
+            revealCells = revealCells,
             currentCell = currentCell,
             currentPosition = currentPosition,
             goal = goal,
@@ -551,6 +585,7 @@ private fun FogWorldMap(
 @Composable
 private fun FogRevealOverlay(
     cells: List<VisitedCell>,
+    revealCells: List<RevealCell>,
     currentCell: WorldCell?,
     currentPosition: GeoPosition?,
     goal: GoalPin?,
@@ -566,7 +601,7 @@ private fun FogRevealOverlay(
         cameraTick
         drawRect(Fog)
         if (map != null) {
-            drawRevealedPlaces(map, cells, currentCell)
+            drawRevealedPlaces(map, cells, revealCells, currentCell, currentPosition)
             currentPosition?.let { drawCurrentDot(map, it) }
             goal?.let { drawGoal(map, it) }
         }
@@ -576,27 +611,48 @@ private fun FogRevealOverlay(
 private fun DrawScope.drawRevealedPlaces(
     map: MapLibreMap,
     cells: List<VisitedCell>,
+    revealCells: List<RevealCell>,
     currentCell: WorldCell?,
+    currentPosition: GeoPosition?,
 ) {
-    val revealed = linkedMapOf<Pair<Int, Int>, Int>()
-    cells.forEach { revealed[it.x to it.y] = it.samples }
-    currentCell?.let { revealed[it.x to it.y] = max(revealed[it.x to it.y] ?: 1, 3) }
     val canvasWidth = size.width
     val canvasHeight = size.height
     val visible = buildList {
-        revealed.forEach { entry ->
-            val cell = WorldCell(entry.key.first, entry.key.second)
+        revealCells.forEach { cell ->
+            val position = WorldCell(cell.x, cell.y).centerPosition(WorldCell.RevealCellSizeMeters)
+            val point = map.projection.toScreenLocation(position.toLatLng())
+            val center = Offset(point.x, point.y)
+            val meters = if (cell.kind == RevealCell.Kind.Road) RoadRevealRadiusMeters else CoreRevealRadiusMeters
+            val radius = radiusPixels(map, position, meters)
+            if (isVisible(center, radius, canvasWidth, canvasHeight)) {
+                add(RevealMark(cell.x, cell.y, center, radius, cell.samples, cell.kind))
+            }
+        }
+        if (revealCells.isEmpty()) {
+            cells.forEach { cell ->
+                val position = WorldCell(cell.x, cell.y).centerPosition()
+                val point = map.projection.toScreenLocation(position.toLatLng())
+                val center = Offset(point.x, point.y)
+                val radius = radiusPixels(map, position, LegacyRevealRadiusMeters)
+                if (isVisible(center, radius, canvasWidth, canvasHeight)) {
+                    add(RevealMark(cell.x, cell.y, center, radius, cell.samples, RevealCell.Kind.Core))
+                }
+            }
+        }
+        currentPosition?.let { position ->
+            val point = map.projection.toScreenLocation(position.toLatLng())
+            val center = Offset(point.x, point.y)
+            val radius = radiusPixels(map, position, CoreRevealRadiusMeters)
+            if (isVisible(center, radius, canvasWidth, canvasHeight)) {
+                add(RevealMark(0, 0, center, radius, 8, RevealCell.Kind.Core))
+            }
+        } ?: currentCell?.let { cell ->
             val position = cell.centerPosition()
             val point = map.projection.toScreenLocation(position.toLatLng())
             val center = Offset(point.x, point.y)
-            val radius = revealRadiusPixels(map, position)
-            if (
-                center.x + radius >= 0f &&
-                center.y + radius >= 0f &&
-                center.x - radius <= canvasWidth &&
-                center.y - radius <= canvasHeight
-            ) {
-                add(RevealMark(cell, center, radius, entry.value))
+            val radius = radiusPixels(map, position, LegacyRevealRadiusMeters)
+            if (isVisible(center, radius, canvasWidth, canvasHeight)) {
+                add(RevealMark(cell.x, cell.y, center, radius, 3, RevealCell.Kind.Core))
             }
         }
     }
@@ -604,10 +660,15 @@ private fun DrawScope.drawRevealedPlaces(
 }
 
 private fun DrawScope.drawRevealBrush(mark: RevealMark) {
-    val x = mark.cell.x
-    val y = mark.cell.y
+    val x = mark.seedX
+    val y = mark.seedY
     val radius = mark.radiusPx
-    val strength = (0.64f + mark.samples.coerceAtMost(8) * 0.035f).coerceAtMost(0.92f)
+    val road = mark.kind == RevealCell.Kind.Road
+    val strength = if (road) {
+        (0.48f + mark.samples.coerceAtMost(6) * 0.035f).coerceAtMost(0.72f)
+    } else {
+        (0.7f + mark.samples.coerceAtMost(8) * 0.035f).coerceAtMost(0.95f)
+    }
     val offsets = listOf(
         Offset(-0.32f, -0.08f),
         Offset(0.28f, -0.18f),
@@ -616,15 +677,15 @@ private fun DrawScope.drawRevealBrush(mark: RevealMark) {
         Offset(0.04f, -0.36f),
     )
     drawCircle(
-        color = Color.Black.copy(alpha = 0.32f),
-        radius = radius * 1.2f,
+        color = Color.Black.copy(alpha = if (road) 0.18f else 0.3f),
+        radius = radius * if (road) 1.05f else 1.18f,
         center = mark.point,
         blendMode = BlendMode.DstOut,
     )
     offsets.forEachIndexed { index, offset ->
-        val roughRadius = radius * (0.58f + noise(x + index * 11, y - index * 7) * 0.28f)
+        val roughRadius = radius * (if (road) 0.36f else 0.58f + noise(x + index * 11, y - index * 7) * 0.28f)
         drawCircle(
-            color = Color.Black.copy(alpha = 0.34f),
+            color = Color.Black.copy(alpha = if (road) 0.14f else 0.34f),
             radius = roughRadius,
             center = mark.point + Offset(offset.x * radius, offset.y * radius),
             blendMode = BlendMode.DstOut,
@@ -632,13 +693,13 @@ private fun DrawScope.drawRevealBrush(mark: RevealMark) {
     }
     drawCircle(
         color = Color.Black.copy(alpha = strength),
-        radius = radius * 0.86f,
+        radius = radius * if (road) 0.82f else 0.86f,
         center = mark.point,
         blendMode = BlendMode.DstOut,
     )
     drawCircle(
         color = Color.Black,
-        radius = radius * 0.56f,
+        radius = radius * if (road) 0.28f else 0.56f,
         center = mark.point,
         blendMode = BlendMode.Clear,
     )
@@ -704,12 +765,93 @@ private fun DrawScope.drawGoalArrow(offscreenPoint: Offset) {
     drawPath(path, Color(0xFF422418), style = Stroke(2.dp.toPx()))
 }
 
-private fun revealRadiusPixels(map: MapLibreMap, position: GeoPosition): Float {
+private fun isVisible(center: Offset, radius: Float, canvasWidth: Float, canvasHeight: Float): Boolean =
+    center.x + radius >= 0f &&
+        center.y + radius >= 0f &&
+        center.x - radius <= canvasWidth &&
+        center.y - radius <= canvasHeight
+
+private fun radiusPixels(map: MapLibreMap, position: GeoPosition, meters: Double): Float {
     val center = map.projection.toScreenLocation(position.toLatLng())
-    val edge = map.projection.toScreenLocation(position.offsetEast(RevealRadiusMeters).toLatLng())
+    val edge = map.projection.toScreenLocation(position.offsetEast(meters).toLatLng())
     return hypot((edge.x - center.x).toDouble(), (edge.y - center.y).toDouble())
         .toFloat()
         .coerceAtLeast(1f)
+}
+
+private fun MapLibreMap.roadRevealCellsNear(position: GeoPosition): Set<WorldCell> {
+    val screen = projection.toScreenLocation(position.toLatLng())
+    val queryRadius = radiusPixelsForQuery(this, position, RoadQueryRadiusMeters).coerceAtLeast(28f)
+    val queryBox = RectF(
+        screen.x - queryRadius,
+        screen.y - queryRadius,
+        screen.x + queryRadius,
+        screen.y + queryRadius,
+    )
+    val features = runCatching { queryRenderedFeatures(queryBox, *RoadLayerIds) }.getOrDefault(emptyList())
+    val cells = LinkedHashSet<WorldCell>()
+    for (feature in features) {
+        for (line in feature.geometry().linePointLists()) {
+            collectRoadRevealCells(line, position, cells)
+            if (cells.size >= MaxRoadRevealCellsPerQuery) return cells
+        }
+    }
+    return cells
+}
+
+private fun radiusPixelsForQuery(map: MapLibreMap, position: GeoPosition, meters: Double): Float {
+    val center = map.projection.toScreenLocation(position.toLatLng())
+    val edge = map.projection.toScreenLocation(position.offsetEast(meters).toLatLng())
+    return hypot((edge.x - center.x).toDouble(), (edge.y - center.y).toDouble()).toFloat()
+}
+
+private fun Geometry?.linePointLists(): List<List<Point>> = when (this) {
+    is LineString -> listOf(coordinates())
+    is MultiLineString -> coordinates()
+    else -> emptyList()
+}
+
+private fun collectRoadRevealCells(
+    points: List<Point>,
+    center: GeoPosition,
+    cells: MutableSet<WorldCell>,
+) {
+    if (points.size < 2) return
+    for (index in 0 until points.lastIndex) {
+        val start = points[index].toGeoPosition()
+        val end = points[index + 1].toGeoPosition()
+        val segmentMeters = start.distanceMetersTo(end)
+        val steps = ceil(segmentMeters / RoadSampleStepMeters).toInt().coerceIn(1, 32)
+        for (step in 0..steps) {
+            val fraction = step.toDouble() / steps
+            val sample = start.interpolate(end, fraction)
+            if (sample.distanceMetersTo(center) <= RoadRevealReachMeters) {
+                cells += WorldCell.fromLocation(
+                    sample.latitude,
+                    sample.longitude,
+                    WorldCell.RevealCellSizeMeters,
+                )
+                if (cells.size >= MaxRoadRevealCellsPerQuery) return
+            }
+        }
+    }
+}
+
+private fun Point.toGeoPosition(): GeoPosition = GeoPosition(latitude = latitude(), longitude = longitude())
+
+private fun GeoPosition.interpolate(other: GeoPosition, fraction: Double): GeoPosition =
+    GeoPosition(
+        latitude = latitude + (other.latitude - latitude) * fraction,
+        longitude = longitude + (other.longitude - longitude) * fraction,
+    )
+
+private fun GeoPosition.distanceMetersTo(other: GeoPosition): Double {
+    val averageLat = ((latitude + other.latitude) / 2.0).toRadians()
+    val metersPerDegreeLat = PI * EarthRadiusMeters / 180.0
+    val metersPerDegreeLon = metersPerDegreeLat * cos(averageLat)
+    val dx = (other.longitude - longitude) * metersPerDegreeLon
+    val dy = (other.latitude - latitude) * metersPerDegreeLat
+    return hypot(dx, dy)
 }
 
 private fun fallbackPosition(cells: List<VisitedCell>): GeoPosition {
