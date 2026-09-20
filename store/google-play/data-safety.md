@@ -2,7 +2,7 @@
 
 Google Play defines "collect" as transmitting user data off the user's device. It says local-only processing does not need to be disclosed as collected. The app still stores sensitive location-derived data locally, so keep the privacy policy explicit.
 
-Version 0.5.5 also stores an optional local goal pin if the user long-presses the
+Version 0.5.6 also stores an optional local goal pin if the user long-presses the
 map. That pin is local app data and is not sent to an ovayuva backend.
 
 ## High-level answers

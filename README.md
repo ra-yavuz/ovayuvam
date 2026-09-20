@@ -21,7 +21,7 @@ contains:
 - A full-screen MapLibre map with Ovayuva-style paper-and-ink OpenFreeMap tiles.
 - A heavier fog overlay that hides unexplored map areas.
 - Precise 20 m reveal trails over the real map.
-- Small road/path reveal extensions near the current location, like fog being brushed along nearby streets.
+- Small road/path reveal extensions after fresh movement on the open map, like fog being brushed along nearby streets.
 - Smoother trail recording that filters poor fixes and fills gaps between good GPS points.
 - Strict fog-of-war reveal at every zoom level, without country-scale aggregation.
 - A private goal pin with an off-screen direction arrow.
@@ -33,18 +33,22 @@ contains:
 
 ## Download
 
-Current APK release: `0.5.5`.
+Current APK release: `0.5.6`.
 
-- Download: [ovayuvam-0.5.5.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.5/ovayuvam-0.5.5.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.5.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.5.apk)
+- Download: [ovayuvam-0.5.6.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.6/ovayuvam-0.5.6.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.6.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.6.apk)
 - Package: `tr.ovayuva.ovayuvam`
 - Size: `44,527,323` bytes
-- SHA-256: `6bd28091801d86693051cbca041572b4e193936b863c66b270fd968d65a57037`
+- SHA-256: `69090f199bb28016e5e5f5857031da441dc17302c3ac8e2efcb873e467356618`
 
 Google Play Console uploads should use the signed Android App Bundle:
 
-- Bundle: `release/ovayuvam-0.5.5.aab`
-- Bundle SHA-256: `c2f922b4032f38f2a637d40c6fd82063b3841803d270115a2cdf83e13d23fbb1`
+- Bundle: `release/ovayuvam-0.5.6.aab`
+- Bundle SHA-256: `61da7b7b381f92a7e276ca324f14883ccc29350ea670f166c2122fa2064dbbc6`
+
+Version 0.5.6 does not paint road/path reveal just because the map opens. The
+first visible position after opening only seeds the road tracker. Nearby road and
+path reveal cells are added after fresh movement while the map is open.
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent

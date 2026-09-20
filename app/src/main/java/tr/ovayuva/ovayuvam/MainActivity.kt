@@ -124,6 +124,7 @@ private const val CoreRevealRadiusMeters = 20.0
 private const val RoadRevealRadiusMeters = 11.0
 private const val LegacyRevealRadiusMeters = 20.0
 private const val RoadRevealReachMeters = 32.0
+private const val RoadRevealMinMovementMeters = 6.0
 private const val RoadQueryRadiusMeters = 38.0
 private const val RoadSampleStepMeters = 8.0
 private const val MaxRoadRevealCellsPerQuery = 180
@@ -444,6 +445,10 @@ private fun FogWorldMap(
     }
     var activeMap by remember { mutableStateOf<MapLibreMap?>(null) }
     var cameraTick by remember { mutableIntStateOf(0) }
+    var mapResumed by remember {
+        mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+    }
+    var lastRoadRevealPosition by remember { mutableStateOf<GeoPosition?>(null) }
     val latestGoalSelected by rememberUpdatedState(onGoalSelected)
 
     LaunchedEffect(activeMap, following, currentPosition, currentCell, recenterRequest) {
@@ -455,10 +460,23 @@ private fun FogWorldMap(
         }
     }
 
-    LaunchedEffect(activeMap, currentPosition) {
+    LaunchedEffect(activeMap, currentPosition, mapResumed) {
         val map = activeMap ?: return@LaunchedEffect
         val position = currentPosition ?: return@LaunchedEffect
+        if (!mapResumed) {
+            lastRoadRevealPosition = position
+            return@LaunchedEffect
+        }
+        val previous = lastRoadRevealPosition
+        if (previous == null) {
+            lastRoadRevealPosition = position
+            return@LaunchedEffect
+        }
+        if (previous.distanceMetersTo(position) < RoadRevealMinMovementMeters) {
+            return@LaunchedEffect
+        }
         val nearbyRoadCells = map.roadRevealCellsNear(position)
+        lastRoadRevealPosition = position
         if (nearbyRoadCells.isNotEmpty()) {
             onRoadCellsObserved(nearbyRoadCells)
         }
@@ -546,9 +564,11 @@ private fun FogWorldMap(
                         }
                         Lifecycle.Event.ON_RESUME -> {
                             mapView.onResume()
+                            mapResumed = true
                             resumed = true
                         }
                         Lifecycle.Event.ON_PAUSE -> {
+                            mapResumed = false
                             mapView.onPause()
                             resumed = false
                         }
