@@ -334,8 +334,8 @@ private fun AttributionPill(modifier: Modifier = Modifier) {
     Surface(
         color = Color.Transparent,
         modifier = modifier.sketchSurface(
-            fill = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
-            border = MaterialTheme.colorScheme.outline.copy(alpha = 0.52f),
+            fill = Ink.copy(alpha = 0.82f),
+            border = Color.White.copy(alpha = 0.42f),
             seed = 302,
         ),
     ) {
@@ -343,7 +343,7 @@ private fun AttributionPill(modifier: Modifier = Modifier) {
             text = BasemapStyle.Attribution,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             style = MaterialTheme.typography.bodySmall,
-            color = Ink,
+            color = Color.White,
         )
     }
 }

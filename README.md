@@ -33,18 +33,18 @@ contains:
 
 ## Download
 
-Current APK release: `0.5.4`.
+Current APK release: `0.5.5`.
 
-- Download: [ovayuvam-0.5.4.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.4/ovayuvam-0.5.4.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.4.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.4.apk)
+- Download: [ovayuvam-0.5.5.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.5/ovayuvam-0.5.5.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.5.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.5.apk)
 - Package: `tr.ovayuva.ovayuvam`
 - Size: `44,527,323` bytes
-- SHA-256: `25c0287a3390163687ef42c9a3f81289601a4a814a07afca2c11aacd2c5022a9`
+- SHA-256: `6bd28091801d86693051cbca041572b4e193936b863c66b270fd968d65a57037`
 
 Google Play Console uploads should use the signed Android App Bundle:
 
-- Bundle: `release/ovayuvam-0.5.4.aab`
-- Bundle SHA-256: `638a068f39cd514a7e7acb41138f21dd16e7ddd8624eaa01865a08de011f516a`
+- Bundle: `release/ovayuvam-0.5.5.aab`
+- Bundle SHA-256: `c2f922b4032f38f2a637d40c6fd82063b3841803d270115a2cdf83e13d23fbb1`
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent

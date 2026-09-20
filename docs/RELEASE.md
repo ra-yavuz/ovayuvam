@@ -2,14 +2,14 @@
 
 ## Current release
 
-- Version: `0.5.4`
+- Version: `0.5.5`
 - Package: `tr.ovayuva.ovayuvam`
-- APK: `ovayuvam-0.5.4.apk`
+- APK: `ovayuvam-0.5.5.apk`
 - Size: `44,527,323` bytes
-- SHA-256: `25c0287a3390163687ef42c9a3f81289601a4a814a07afca2c11aacd2c5022a9`
-- Play App Bundle: `ovayuvam-0.5.4.aab`
-- Bundle size: `17,792,070` bytes
-- Bundle SHA-256: `638a068f39cd514a7e7acb41138f21dd16e7ddd8624eaa01865a08de011f516a`
+- SHA-256: `6bd28091801d86693051cbca041572b4e193936b863c66b270fd968d65a57037`
+- Play App Bundle: `ovayuvam-0.5.5.aab`
+- Bundle size: `17,792,026` bytes
+- Bundle SHA-256: `c2f922b4032f38f2a637d40c6fd82063b3841803d270115a2cdf83e13d23fbb1`
 - Signing certificate SHA-256: `41a682a94ae3098fb09bf3e984be9c591f3093329618d057a59b3f922719873e`
 
 ## Verified
@@ -17,7 +17,7 @@
 - Clean release build passed with `./gradlew clean testDebugUnitTest assembleRelease bundleRelease`.
 - Android release lint passed.
 - APK signature verification passed.
-- APK version is `versionCode=13` and `versionName=0.5.4`.
+- APK version is `versionCode=14` and `versionName=0.5.5`.
 - APK asks for internet and network-state permissions for OpenFreeMap/OpenStreetMap map tiles.
 - APK asks for location, foreground-service, notification, and AndroidX internal receiver permissions.
 - APK does not declare `android.permission.ACCESS_WIFI_STATE`.
@@ -26,7 +26,8 @@
 - The Android launcher foreground, themed launcher mask, and `/yuvam/` logo use the same folded map artwork as the map-view info button.
 - The reveal view uses a smaller circular paintbrush-style radius over a much stronger fog layer.
 - The location service filters stale or low-accuracy fixes, rejects implausible jumps, and interpolates between accepted fixes for a smoother walking trail.
-- Version 0.5.4 keeps strict fog-of-war reveal at every zoom level.
+- Version 0.5.5 keeps strict fog-of-war reveal at every zoom level.
+- The bottom attribution pill uses white text on a dark translucent background so the map credit remains readable over dark fog.
 - The service records a more precise 20 m reveal trail and interpolates points every 10 m.
 - While the map is open, nearby rendered streets and paths add small road/path reveal cells so explored places can spread like a street web instead of isolated dots.
 - Long-pressing the map stores a private local goal pin.
@@ -44,7 +45,7 @@ are stored locally as grid cells on the phone. A goal pin, if set, is stored
 locally on the phone. On launch, it requests the needed permissions and starts
 visible location tracking as soon as permission and Android Location are available.
 
-There is no export or import UI in version 0.5.4. Later backup work must be an
+There is no export or import UI in version 0.5.5. Later backup work must be an
 explicit product decision.
 
 ## Not included yet
@@ -65,7 +66,7 @@ fine location permission before the service starts. See Android foreground servi
 types: https://developer.android.com/develop/background-work/services/fgs/service-types
 
 Android 10 and newer use `ACCESS_BACKGROUND_LOCATION` for background location
-access. This app does not declare that permission in version 0.5.4. See Android
+access. This app does not declare that permission in version 0.5.5. See Android
 location permissions: https://developer.android.com/develop/sensors-and-location/location/permissions
 
 Real map tiles require network access. The app uses OpenFreeMap/OpenMapTiles/

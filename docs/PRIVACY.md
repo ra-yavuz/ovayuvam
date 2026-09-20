@@ -33,7 +33,7 @@ raw GPS points.
 ## Backup
 
 Android automatic backup and device transfer are disabled in version 1. Version
-0.5.4 has no export, import, account, backend, or sync feature.
+0.5.5 has no export, import, account, backend, or sync feature.
 
 A later backup feature can use the user's Google Drive only after a clear opt-in.
 The backup should be encrypted on the device before upload. The app should not hold
