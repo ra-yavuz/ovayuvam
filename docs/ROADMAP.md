@@ -12,6 +12,7 @@
 - Full-screen local fog map with strong fog, circular reveal trails and wide zoom.
 - Private local goal pin with an off-screen direction arrow.
 - Manual encrypted export/import.
+- Progress-aware foreground notification text.
 - Public page at `ovayuva.tr/yuvam/`.
 
 ## Phase 2: private backup

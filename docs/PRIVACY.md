@@ -12,6 +12,7 @@ The app records:
 - Last seen time.
 - Sample count per cell.
 - Goal pin latitude and longitude, if the user sets a goal.
+- Today's accepted walking distance and latest progress time, used for notification text.
 
 The app does not record:
 
@@ -33,7 +34,7 @@ raw GPS points.
 ## Backup
 
 Android automatic backup and device transfer are disabled in version 1. Version
-0.5.7 has no account, backend, automatic cloud backup, or sync feature. It includes
+0.5.8 has no account, backend, automatic cloud backup, or sync feature. It includes
 manual encrypted export/import. Exported files are sensitive location history even
 though they are encrypted. The user must keep the backup file and passphrase;
 ovayuvam cannot recover the passphrase.

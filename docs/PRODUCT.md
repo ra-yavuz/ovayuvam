@@ -23,6 +23,7 @@ Version 1 is a private fog-of-war map:
 - Let the fog hide unexplored streets strongly enough to invite new routes.
 - Long-press the map to place a private goal pin.
 - Follow the edge arrow when the goal pin is outside the visible map.
+- See a gentle foreground notification that can reflect today's progress.
 - Keep the data on the device.
 - Export an encrypted backup manually before changing phones or reinstalling.
 - Use the small info button for privacy, contact, and legal details.

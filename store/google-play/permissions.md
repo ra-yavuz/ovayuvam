@@ -1,6 +1,6 @@
 # Permissions and sensitive access
 
-## Declared Android permissions in 0.5.7
+## Declared Android permissions in 0.5.8
 
 - `android.permission.INTERNET`
 - `android.permission.ACCESS_COARSE_LOCATION`
@@ -32,6 +32,7 @@ Foreground service and foreground service location:
 Post notifications:
 
 - Needed on Android 13+ so the foreground-service notification can be shown.
+- The notification may show local progress text, such as approximate cleared area or walking distance for today.
 
 Access network state:
 
@@ -53,4 +54,4 @@ If Play Console asks about background location, use this answer:
 
 Short disclosure:
 
-`ovayuvam uses location to reveal the map where you walk. Tracking is visible through an Android notification. Your revealed world is stored locally on your phone.`
+`ovayuvam uses location to reveal the map where you walk. Tracking is visible through an Android notification. Your revealed world and progress stats are stored locally on your phone.`

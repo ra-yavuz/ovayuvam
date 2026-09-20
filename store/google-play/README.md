@@ -6,12 +6,12 @@ Current candidate:
 
 - App name: `ovayuvam`
 - Package name: `tr.ovayuva.ovayuvam`
-- Version: `0.5.7`
-- Version code: `16`
-- Play upload artifact: `release/ovayuvam-0.5.7.aab`
-- AAB SHA-256: `5360c06515f6d5737e3f2e9747c92f35bc6a402644773f8a0ab4f90e98108fdc`
-- APK mirror artifact: `release/ovayuvam-0.5.7.apk`
-- APK SHA-256: `060d730a499ca1bf9554ad257ace7ce926863eefdd91c805646debe9977c4c9d`
+- Version: `0.5.8`
+- Version code: `17`
+- Play upload artifact: `release/ovayuvam-0.5.8.aab`
+- AAB SHA-256: `a48a5ff21069105bfa768c2e964dc845a156f129b78dabb911e24c190ae33373`
+- APK mirror artifact: `release/ovayuvam-0.5.8.apk`
+- APK SHA-256: `4eedfebdc677ec6a6d6d5dd2fbe554c758a696ebd545ed61ef3ae32f3df20a42`
 - Privacy policy URL: `https://ovayuva.tr/yuvam/privacy/`
 - Public app page: `https://ovayuva.tr/yuvam/`
 

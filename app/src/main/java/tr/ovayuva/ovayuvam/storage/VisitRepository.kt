@@ -124,6 +124,26 @@ class VisitRepository(context: Context) {
         }
     }
 
+    fun revealedCellCountSince(sinceMs: Long): Int {
+        db.readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM reveal_cells WHERE first_seen_ms >= ?",
+            arrayOf(sinceMs.toString()),
+        ).use { cursor ->
+            cursor.moveToFirst()
+            return cursor.getInt(0)
+        }
+    }
+
+    fun lastRevealSeenMs(): Long? {
+        db.readableDatabase.rawQuery(
+            "SELECT MAX(last_seen_ms) FROM reveal_cells",
+            emptyArray(),
+        ).use { cursor ->
+            cursor.moveToFirst()
+            return if (cursor.isNull(0)) null else cursor.getLong(0)
+        }
+    }
+
     fun recentCells(limit: Int = 800): List<VisitedCell> = cells(limit)
 
     fun recentRevealCells(limit: Int = 4_000): List<RevealCell> = revealCells(limit)

@@ -2,10 +2,13 @@
 
 Google Play defines "collect" as transmitting user data off the user's device. It says local-only processing does not need to be disclosed as collected. The app still stores sensitive location-derived data locally, so keep the privacy policy explicit.
 
-Version 0.5.7 also stores an optional local goal pin if the user long-presses the
+Version 0.5.8 also stores an optional local goal pin if the user long-presses the
 map. That pin is local app data and is not sent to an ovayuva backend.
 
-Version 0.5.7 lets the user manually export an encrypted backup file through the
+Version 0.5.8 stores today's accepted walking distance and latest progress time
+locally so the foreground notification can show gentle progress text.
+
+Version 0.5.8 lets the user manually export an encrypted backup file through the
 Android file picker. The user chooses where that file goes. If they choose Drive,
 Files, or another provider, that transfer is user-started and handled by Android
 and the selected provider, not by an ovayuva backend.

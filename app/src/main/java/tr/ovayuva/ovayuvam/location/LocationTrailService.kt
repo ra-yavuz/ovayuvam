@@ -26,20 +26,26 @@ import tr.ovayuva.ovayuvam.R
 import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.storage.VisitRepository
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.ceil
 
 class LocationTrailService : Service() {
     private lateinit var locationManager: LocationManager
     private lateinit var repository: VisitRepository
     private lateinit var trackingState: TrackingState
+    private lateinit var progressStore: DailyProgressStore
     private var listener: LocationListener? = null
     private var lastAcceptedLocation: Location? = null
+    private var lastNotificationText: String? = null
+    private var lastNotificationRefreshMs: Long = 0L
 
     override fun onCreate() {
         super.onCreate()
         locationManager = getSystemService(LocationManager::class.java)
         repository = VisitRepository(this)
         trackingState = TrackingState(this)
+        progressStore = DailyProgressStore(this)
         ensureChannel()
     }
 
@@ -120,9 +126,15 @@ class LocationTrailService : Service() {
         if (!location.isUsable(now)) return
         val previous = lastAcceptedLocation
         recordTrail(previous, location, now)
+        val movedMeters = previous
+            ?.takeIf { it.distanceTo(location) <= MaxInterpolatedTrailMeters }
+            ?.distanceTo(location)
+            ?: 0f
+        progressStore.addProgress(now, movedMeters)
         lastAcceptedLocation = Location(location)
         val cell = location.toWorldCell()
         trackingState.setCurrentLocation(location.latitude, location.longitude, cell)
+        refreshNotification(now)
     }
 
     private fun Location.isUsable(nowMs: Long): Boolean {
@@ -228,7 +240,7 @@ class LocationTrailService : Service() {
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
-            notification(),
+            notification(notificationText(System.currentTimeMillis())),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             } else {
@@ -237,7 +249,35 @@ class LocationTrailService : Service() {
         )
     }
 
-    private fun notification(): Notification {
+    private fun refreshNotification(nowMs: Long = System.currentTimeMillis()) {
+        if (nowMs - lastNotificationRefreshMs < NotificationMinRefreshMs) return
+        val text = notificationText(nowMs)
+        if (text == lastNotificationText && lastNotificationRefreshMs > 0L) return
+        lastNotificationText = text
+        lastNotificationRefreshMs = nowMs
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification(text))
+    }
+
+    private fun notificationText(nowMs: Long): String {
+        val todayStartMs = LocalDate.now(ZoneId.systemDefault())
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+        val progress = progressStore.snapshot(nowMs)
+        val lastProgressMs = listOfNotNull(progress.lastProgressMs, repository.lastRevealSeenMs()).maxOrNull()
+        val todayArea = repository.revealedCellCountSince(todayStartMs) *
+            (WorldCell.RevealCellSizeMeters * WorldCell.RevealCellSizeMeters).toLong()
+        return TrackingNotificationText.text(
+            TrackingNotificationStats(
+                todayRevealedSquareMeters = todayArea,
+                todayDistanceMeters = progress.distanceMeters,
+                lastProgressMs = lastProgressMs,
+                nowMs = nowMs,
+            ),
+        )
+    }
+
+    private fun notification(text: String): Notification {
         val openIntent = PendingIntent.getActivity(
             this,
             0,
@@ -247,7 +287,8 @@ class LocationTrailService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_map)
             .setContentTitle(getString(R.string.tracking_notification_title))
-            .setContentText(getString(R.string.tracking_notification_text))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(openIntent)
             .setOngoing(true)
             .build()
@@ -266,6 +307,7 @@ class LocationTrailService : Service() {
         private const val TrailStepMeters = 10f
         private const val MaxInterpolatedTrailMeters = 2_000f
         private const val MaxInterpolatedPoints = 96
+        private const val NotificationMinRefreshMs = 5L * 60L * 1_000L
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(

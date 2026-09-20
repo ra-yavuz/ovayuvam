@@ -10,6 +10,8 @@ ovayuva account. It uses internet access only for the real basemap.
   the app is revealing the world.
 - `TrackingState`: small shared-preferences flag used by the UI to reflect whether
   tracking is active and where the latest current cell is.
+- `DailyProgressStore`: small shared-preferences store for the current day's
+  accepted walking distance and latest progress time, used only for notification text.
 - `GoalState`: small shared-preferences store for the optional private goal pin.
 - `WorldCell`: converts latitude and longitude into stable Web Mercator grid cells.
 - `VisitRepository`: stores visited cells in SQLite on the device.
@@ -20,7 +22,7 @@ The local database stores grid cells, first seen time, last seen time, and sampl
 count. It does not store raw route uploads. This still counts as sensitive
 location history because repeated cells can reveal routines.
 
-Android cloud backup and device transfer are disabled for version 1. Version 0.5.7
+Android cloud backup and device transfer are disabled for version 1. Version 0.5.8
 includes manual encrypted export/import. The file contains visited cells, reveal
 cells and the optional goal pin, encrypted with a user passphrase using
 PBKDF2WithHmacSHA256 and AES-256-GCM. Later Google Drive backup should be
@@ -28,7 +30,7 @@ explicit, encrypted, user-started, and restorable without an ovayuva server.
 
 ## Map approach
 
-Version 0.5.7 uses MapLibre with OpenFreeMap vector tiles styled in the Ovayuva
+Version 0.5.8 uses MapLibre with OpenFreeMap vector tiles styled in the Ovayuva
 paper-and-ink direction. A heavy fog overlay sits above the real map and clears a
 soft circular radius as the user walks. The visible trail is meant to feel like
 brushing fog from paper, not like square tile chunks.
@@ -42,6 +44,11 @@ stale seed locations, drops low-accuracy fixes, rejects large implausible jumps,
 fills the saved trail between accepted fixes. That keeps GPS glitches from clearing
 random fog marks and makes movement look less dotted without increasing the reveal
 radius.
+
+The foreground notification uses only local stats. It can show a default
+fog-clearing line, an evening summary based on today's revealed cells and accepted
+walking distance, or a gentle return line after multiple days without progress.
+It does not schedule separate background marketing notifications.
 
 Road and path reveal is not generated from saved cells when the map opens. Opening
 or resuming the map seeds the road tracker with the current position. Nearby
