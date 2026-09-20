@@ -2,12 +2,12 @@
 
 ## Already prepared
 
-- Signed Android App Bundle: `release/ovayuvam-0.5.9.aab`
-- AAB SHA-256: `a11827ba8b340a8112e99f04f59dde53f5557399e4bf1a20b5fef8745a8ee392`
-- Signed APK mirror: `release/ovayuvam-0.5.9.apk`
-- APK SHA-256: `3f0a684871932d1621bfc3062930630afd19c0f4b970f47b468a53eb0c02f2fd`
+- Signed Android App Bundle: `release/ovayuvam-0.5.10.aab`
+- AAB SHA-256: `29869ac9e8bc8bcd957040198d461c63e6f3260f9deadbf1dbb6da585589f4cf`
+- Signed APK mirror: `release/ovayuvam-0.5.10.apk`
+- APK SHA-256: `cef2beb6e7ccde5780d22f5ce769e4f20533e28d60f18e89a48a514905d45fe6`
 - Package: `tr.ovayuva.ovayuvam`
-- Version: `0.5.9`
+- Version: `0.5.10`
 - Version code: `18`
 - Privacy policy URL: `https://ovayuva.tr/yuvam/privacy/`
 - Store icon draft: `assets/play-icon-512.png`
@@ -24,7 +24,7 @@
 3. Create a new app with package name `tr.ovayuva.ovayuvam`.
 4. Choose app or game: `App`.
 5. Choose free or paid: likely `Free`.
-6. Upload `release/ovayuvam-0.5.9.aab` to internal testing first.
+6. Upload `release/ovayuvam-0.5.10.aab` to internal testing first.
 7. Fill the main store listing using `listing-en.md`.
 8. Upload store icon and feature graphic from `assets/`.
 9. Capture and upload final phone screenshots.

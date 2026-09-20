@@ -2,7 +2,7 @@
 
 Google Play needs phone screenshots for the store listing.
 
-Capture from a real or emulator install of `ovayuvam 0.5.9`.
+Capture from a real or emulator install of `ovayuvam 0.5.10`.
 
 Recommended screenshots:
 

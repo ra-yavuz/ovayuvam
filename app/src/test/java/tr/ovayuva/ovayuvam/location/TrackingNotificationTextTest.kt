@@ -10,11 +10,27 @@ class TrackingNotificationTextTest {
     private val zone = ZoneId.of("Europe/Istanbul")
 
     @Test
-    fun eveningTextSummarizesTodayDistance() {
+    fun eveningTextSummarizesTodayRevealAreaInSquareMeters() {
         val now = LocalDateTime.of(2026, 9, 20, 21, 15).atZone(zone).toInstant().toEpochMilli()
         val text = TrackingNotificationText.text(
             TrackingNotificationStats(
-                todayHasProgress = true,
+                todayRevealedSquareMeters = 11_200,
+                todayDistanceMeters = 1_650f,
+                lastProgressMs = now,
+                nowMs = now,
+            ),
+            zone,
+        )
+
+        assertEquals("Today you revealed about 11,200 m² of your map.", text)
+    }
+
+    @Test
+    fun eveningTextFallsBackToDistanceWhenNoNewAreaWasStored() {
+        val now = LocalDateTime.of(2026, 9, 20, 21, 15).atZone(zone).toInstant().toEpochMilli()
+        val text = TrackingNotificationText.text(
+            TrackingNotificationStats(
+                todayRevealedSquareMeters = 0,
                 todayDistanceMeters = 1_650f,
                 lastProgressMs = now,
                 nowMs = now,
@@ -26,11 +42,11 @@ class TrackingNotificationTextTest {
     }
 
     @Test
-    fun eveningTextAvoidsInflatedAreaForSmallWalks() {
+    fun eveningTextStaysGentleForTinyProgress() {
         val now = LocalDateTime.of(2026, 9, 20, 21, 15).atZone(zone).toInstant().toEpochMilli()
         val text = TrackingNotificationText.text(
             TrackingNotificationStats(
-                todayHasProgress = true,
+                todayRevealedSquareMeters = 0,
                 todayDistanceMeters = 42f,
                 lastProgressMs = now,
                 nowMs = now,
@@ -48,7 +64,7 @@ class TrackingNotificationTextTest {
 
         val text = TrackingNotificationText.text(
             TrackingNotificationStats(
-                todayHasProgress = false,
+                todayRevealedSquareMeters = 0,
                 todayDistanceMeters = 0f,
                 lastProgressMs = fourDaysAgo,
                 nowMs = now,
@@ -65,7 +81,7 @@ class TrackingNotificationTextTest {
 
         val text = TrackingNotificationText.text(
             TrackingNotificationStats(
-                todayHasProgress = true,
+                todayRevealedSquareMeters = 800,
                 todayDistanceMeters = 40f,
                 lastProgressMs = now,
                 nowMs = now,

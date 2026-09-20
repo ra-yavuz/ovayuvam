@@ -35,30 +35,30 @@ contains:
 
 ## Download
 
-Current APK release: `0.5.9`.
+Current APK release: `0.5.10`.
 
-- Download: [ovayuvam-0.5.9.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.9/ovayuvam-0.5.9.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.9.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.9.apk)
+- Download: [ovayuvam-0.5.10.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.10/ovayuvam-0.5.10.apk)
+- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.10.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.10.apk)
 - Package: `tr.ovayuva.ovayuvam`
-- Size: `44,773,083` bytes
-- SHA-256: `3f0a684871932d1621bfc3062930630afd19c0f4b970f47b468a53eb0c02f2fd`
+- Size: `44,773,087` bytes
+- SHA-256: `cef2beb6e7ccde5780d22f5ce769e4f20533e28d60f18e89a48a514905d45fe6`
 
 Google Play Console uploads should use the signed Android App Bundle:
 
-- Bundle: `release/ovayuvam-0.5.9.aab`
-- Bundle SHA-256: `a11827ba8b340a8112e99f04f59dde53f5557399e4bf1a20b5fef8745a8ee392`
+- Bundle: `release/ovayuvam-0.5.10.aab`
+- Bundle SHA-256: `29869ac9e8bc8bcd957040198d461c63e6f3260f9deadbf1dbb6da585589f4cf`
 
-Version 0.5.9 adds local progress-aware notification text. While tracking is
-active, the permanent notification can show a normal fog-clearing line, an evening
-summary with today's walked distance, or a gentle return line after multiple days
-without progress. It does not show cleared square metres or hectares because that
-estimate can feel inflated on short walks.
+Version 0.5.10 restores a simple square-meter progress line for the evening
+notification. It counts only unique core reveal cells first seen today, ignores
+road/path glow cells, and keeps the wording approximate. It does not use hectares.
+If there is movement but no reliable new reveal area, it falls back to today's
+walked distance.
 
-Version 0.5.9 does not paint road/path reveal just because the map opens. The
+Version 0.5.10 does not paint road/path reveal just because the map opens. The
 first visible position after opening only seeds the road tracker. Nearby road and
 path reveal cells are added after fresh movement while the map is open.
 
-Version 0.5.9 includes manual encrypted export/import. The backup file includes
+Version 0.5.10 includes manual encrypted export/import. The backup file includes
 revealed cells and the optional goal pin. It is encrypted with a passphrase chosen
 by the user. ovayuvam cannot recover that passphrase.
 

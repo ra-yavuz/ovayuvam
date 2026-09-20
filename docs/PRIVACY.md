@@ -34,7 +34,7 @@ raw GPS points.
 ## Backup
 
 Android automatic backup and device transfer are disabled in version 1. Version
-0.5.9 has no account, backend, automatic cloud backup, or sync feature. It includes
+0.5.10 has no account, backend, automatic cloud backup, or sync feature. It includes
 manual encrypted export/import. Exported files are sensitive location history even
 though they are encrypted. The user must keep the backup file and passphrase;
 ovayuvam cannot recover the passphrase.

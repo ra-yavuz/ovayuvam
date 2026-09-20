@@ -134,6 +134,16 @@ class VisitRepository(context: Context) {
         }
     }
 
+    fun coreRevealedCellCountSince(sinceMs: Long): Int {
+        db.readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM reveal_cells WHERE kind = ? AND first_seen_ms >= ?",
+            arrayOf(RevealCell.Kind.Core.id.toString(), sinceMs.toString()),
+        ).use { cursor ->
+            cursor.moveToFirst()
+            return cursor.getInt(0)
+        }
+    }
+
     fun lastRevealSeenMs(): Long? {
         db.readableDatabase.rawQuery(
             "SELECT MAX(last_seen_ms) FROM reveal_cells",

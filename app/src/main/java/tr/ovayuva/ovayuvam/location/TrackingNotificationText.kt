@@ -3,10 +3,11 @@ package tr.ovayuva.ovayuvam.location
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
+import java.util.Locale
 import kotlin.math.roundToInt
 
 data class TrackingNotificationStats(
-    val todayHasProgress: Boolean,
+    val todayRevealedSquareMeters: Int,
     val todayDistanceMeters: Float,
     val lastProgressMs: Long?,
     val nowMs: Long,
@@ -23,8 +24,10 @@ object TrackingNotificationText {
             return "Let's expand your world map. Tap to reveal a new way."
         }
         val hour = LocalTime.ofInstant(Instant.ofEpochMilli(stats.nowMs), zoneId).hour
-        if (hour >= 19 && stats.todayHasProgress) {
-            return if (stats.todayDistanceMeters >= 1_000f) {
+        if (hour >= 19 && stats.hasProgressToday) {
+            return if (stats.todayRevealedSquareMeters >= MinimumAreaForNotificationSquareMeters) {
+                "Today you revealed about ${formatSquareMeters(stats.todayRevealedSquareMeters)} of your map."
+            } else if (stats.todayDistanceMeters >= 1_000f) {
                 "Today you walked about ${formatDistance(stats.todayDistanceMeters)} through the fog."
             } else if (stats.todayDistanceMeters >= 100f) {
                 "Today you walked about ${formatDistance(stats.todayDistanceMeters)} through the fog."
@@ -50,4 +53,18 @@ object TrackingNotificationText {
         val rounded = (value * 10.0).roundToInt() / 10.0
         return if (rounded % 1.0 == 0.0) rounded.toInt().toString() else rounded.toString()
     }
+
+    private fun formatSquareMeters(squareMeters: Int): String {
+        val rounded = if (squareMeters >= 1_000) {
+            ((squareMeters + 50) / 100) * 100
+        } else {
+            squareMeters
+        }
+        return "%,d m²".format(Locale.US, rounded)
+    }
+
+    private val TrackingNotificationStats.hasProgressToday: Boolean
+        get() = todayRevealedSquareMeters > 0 || todayDistanceMeters > 0f
+
+    private const val MinimumAreaForNotificationSquareMeters = 400
 }
