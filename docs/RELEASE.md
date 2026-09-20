@@ -2,14 +2,14 @@
 
 ## Current release
 
-- Version: `0.5.2`
+- Version: `0.5.3`
 - Package: `tr.ovayuva.ovayuvam`
-- APK: `ovayuvam-0.5.2.apk`
-- Size: `44,527,323` bytes
-- SHA-256: `a015dd6f288beedfeed1d6929ddea88fc862bef92510428358531f14ed3e4515`
-- Play App Bundle: `ovayuvam-0.5.2.aab`
-- Bundle size: `17,789,000` bytes
-- Bundle SHA-256: `e2b02154911d6ecd06a7e20d059ae3bde9ee5c8fd383f6ed1c26b774be91d9fd`
+- APK: `ovayuvam-0.5.3.apk`
+- Size: `44,510,939` bytes
+- SHA-256: `b711e42aa90e41744ae08a8df88d60e5abf35b159218d8168bfaa93159f6e9b1`
+- Play App Bundle: `ovayuvam-0.5.3.aab`
+- Bundle size: `17,783,912` bytes
+- Bundle SHA-256: `86a050d82d66f024314eaa61ee6d36a7402f911353e75fc00a3f25f625a0e2c2`
 - Signing certificate SHA-256: `41a682a94ae3098fb09bf3e984be9c591f3093329618d057a59b3f922719873e`
 
 ## Verified
@@ -17,7 +17,7 @@
 - Clean release build passed with `./gradlew clean testDebugUnitTest assembleRelease bundleRelease`.
 - Android release lint passed.
 - APK signature verification passed.
-- APK version is `versionCode=11` and `versionName=0.5.2`.
+- APK version is `versionCode=12` and `versionName=0.5.3`.
 - APK asks for internet and network-state permissions for OpenFreeMap/OpenStreetMap map tiles.
 - APK asks for location, foreground-service, notification, and AndroidX internal receiver permissions.
 - APK does not declare `android.permission.ACCESS_WIFI_STATE`.
@@ -26,7 +26,7 @@
 - The Android launcher foreground, themed launcher mask, and `/yuvam/` logo use the same folded map artwork as the map-view info button.
 - The reveal view uses a smaller circular paintbrush-style radius over a much stronger fog layer.
 - The location service filters stale or low-accuracy fixes, rejects implausible jumps, and interpolates between accepted fixes for a smoother walking trail.
-- When zoomed out, the reveal layer groups nearby visited cells into soft familiarity islands so explored places read as regions instead of thin route lines.
+- Version 0.5.3 restores strict fog-of-war reveal at every zoom level. The zoomed-out aggregation behavior was removed because it could reveal too much at country scale.
 - Long-pressing the map stores a private local goal pin.
 - When the goal pin is off screen at normal exploration zoom, the app draws an edge arrow toward it.
 - Map zoom supports a wide inspection range while keeping the reveal radius tied to world cells.
@@ -42,7 +42,7 @@ are stored locally as grid cells on the phone. A goal pin, if set, is stored
 locally on the phone. On launch, it requests the needed permissions and starts
 visible location tracking as soon as permission and Android Location are available.
 
-There is no export or import UI in version 0.5.2. Later backup work must be an
+There is no export or import UI in version 0.5.3. Later backup work must be an
 explicit product decision.
 
 ## Not included yet
@@ -63,7 +63,7 @@ fine location permission before the service starts. See Android foreground servi
 types: https://developer.android.com/develop/background-work/services/fgs/service-types
 
 Android 10 and newer use `ACCESS_BACKGROUND_LOCATION` for background location
-access. This app does not declare that permission in version 0.5.2. See Android
+access. This app does not declare that permission in version 0.5.3. See Android
 location permissions: https://developer.android.com/develop/sensors-and-location/location/permissions
 
 Real map tiles require network access. The app uses OpenFreeMap/OpenMapTiles/

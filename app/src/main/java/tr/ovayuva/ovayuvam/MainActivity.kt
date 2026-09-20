@@ -94,7 +94,6 @@ import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 class MainActivity : ComponentActivity() {
     private val repository by lazy { VisitRepository(this) }
@@ -118,8 +117,6 @@ private const val RevealRadiusCells = 0.75
 private const val RevealRadiusMeters = WorldCell.DefaultCellSizeMeters * RevealRadiusCells
 private const val EarthRadiusMeters = 6_378_137.0
 private const val GoalArrowMinZoom = 11.0
-private const val FamiliarityIslandMaxZoom = 14.35
-private const val MaxRenderedVisitedCells = 8_000
 
 private data class RevealMark(
     val cell: WorldCell,
@@ -128,21 +125,12 @@ private data class RevealMark(
     val samples: Int,
 )
 
-private data class RevealCluster(
-    val seedX: Int,
-    val seedY: Int,
-    val point: Offset,
-    val radiusPx: Float,
-    val samples: Int,
-    val count: Int,
-)
-
 @Composable
 private fun OvayuvamScreen(repository: VisitRepository) {
     val context = LocalContext.current
     val trackingState = remember { TrackingState(context) }
     val goalState = remember { GoalState(context) }
-    var cells by remember { mutableStateOf(repository.recentCells(MaxRenderedVisitedCells)) }
+    var cells by remember { mutableStateOf(repository.recentCells(4_000)) }
     var currentCell by remember { mutableStateOf(trackingState.currentCell()) }
     var currentPosition by remember { mutableStateOf(trackingState.currentPosition()) }
     var goal by remember { mutableStateOf(goalState.goal()) }
@@ -153,7 +141,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     var following by remember { mutableStateOf(true) }
 
     fun refresh() {
-        cells = repository.recentCells(MaxRenderedVisitedCells)
+        cells = repository.recentCells(4_000)
         currentCell = trackingState.currentCell()
         currentPosition = trackingState.currentPosition()
         goal = goalState.goal()
@@ -612,94 +600,7 @@ private fun DrawScope.drawRevealedPlaces(
             }
         }
     }
-    if (map.cameraPosition.zoom < FamiliarityIslandMaxZoom) {
-        drawFamiliarityIslands(visible, map.cameraPosition.zoom)
-    } else {
-        visible.forEach(::drawRevealBrush)
-    }
-}
-
-private fun DrawScope.drawFamiliarityIslands(
-    marks: List<RevealMark>,
-    zoom: Double,
-) {
-    if (marks.isEmpty()) return
-    val bucketSize = familiarityBucketSize(zoom)
-    val clusters = marks
-        .groupBy { mark -> floorDiv(mark.cell.x, bucketSize) to floorDiv(mark.cell.y, bucketSize) }
-        .values
-        .map { group ->
-            var weightedX = 0f
-            var weightedY = 0f
-            var totalWeight = 0f
-            var samples = 0
-            var maxRadius = 0f
-            group.forEach { mark ->
-                val weight = mark.samples.coerceAtLeast(1).toFloat()
-                weightedX += mark.point.x * weight
-                weightedY += mark.point.y * weight
-                totalWeight += weight
-                samples += mark.samples
-                maxRadius = max(maxRadius, mark.radiusPx)
-            }
-            val count = group.size
-            val zoomSpread = (FamiliarityIslandMaxZoom - zoom).toFloat().coerceIn(0f, 5f)
-            val densityBoost = sqrt(count.toFloat()).coerceAtMost(12f)
-            val radius = (maxRadius * (bucketSize * 0.7f + densityBoost * 1.15f) * (1f + zoomSpread * 0.18f))
-                .coerceAtLeast((24f + zoomSpread * 6f).dp.toPx())
-                .coerceAtMost(max(size.width, size.height) * 0.34f)
-            RevealCluster(
-                seedX = group.first().cell.x,
-                seedY = group.first().cell.y,
-                point = Offset(weightedX / totalWeight, weightedY / totalWeight),
-                radiusPx = radius,
-                samples = samples,
-                count = count,
-            )
-        }
-        .sortedBy { it.samples }
-
-    clusters.forEach(::drawFamiliarityIsland)
-}
-
-private fun DrawScope.drawFamiliarityIsland(cluster: RevealCluster) {
-    val radius = cluster.radiusPx
-    val sampleBoost = sqrt(cluster.samples.coerceAtLeast(1).toFloat())
-    val strength = (0.52f + sampleBoost * 0.035f + cluster.count * 0.012f).coerceIn(0.58f, 0.9f)
-    val offsets = listOf(
-        Offset(-0.26f, -0.10f),
-        Offset(0.24f, -0.20f),
-        Offset(-0.16f, 0.26f),
-        Offset(0.28f, 0.16f),
-        Offset(0.02f, -0.30f),
-    )
-    drawCircle(
-        color = Color.Black.copy(alpha = 0.24f),
-        radius = radius * 1.55f,
-        center = cluster.point,
-        blendMode = BlendMode.DstOut,
-    )
-    offsets.forEachIndexed { index, offset ->
-        val roughRadius = radius * (0.66f + noise(cluster.seedX + index * 17, cluster.seedY - index * 13) * 0.28f)
-        drawCircle(
-            color = Color.Black.copy(alpha = 0.28f),
-            radius = roughRadius,
-            center = cluster.point + Offset(offset.x * radius, offset.y * radius),
-            blendMode = BlendMode.DstOut,
-        )
-    }
-    drawCircle(
-        color = Color.Black.copy(alpha = strength),
-        radius = radius * 0.92f,
-        center = cluster.point,
-        blendMode = BlendMode.DstOut,
-    )
-    drawCircle(
-        color = Color.Black.copy(alpha = 0.76f),
-        radius = radius * 0.52f,
-        center = cluster.point,
-        blendMode = BlendMode.DstOut,
-    )
+    visible.forEach(::drawRevealBrush)
 }
 
 private fun DrawScope.drawRevealBrush(mark: RevealMark) {
@@ -802,15 +703,6 @@ private fun DrawScope.drawGoalArrow(offscreenPoint: Offset) {
     drawPath(path, Color(0xFFE84A5F))
     drawPath(path, Color(0xFF422418), style = Stroke(2.dp.toPx()))
 }
-
-private fun familiarityBucketSize(zoom: Double): Int = when {
-    zoom < 10.5 -> 18
-    zoom < 12.0 -> 12
-    zoom < 13.25 -> 7
-    else -> 4
-}
-
-private fun floorDiv(value: Int, divisor: Int): Int = Math.floorDiv(value, divisor)
 
 private fun revealRadiusPixels(map: MapLibreMap, position: GeoPosition): Float {
     val center = map.projection.toScreenLocation(position.toLatLng())
