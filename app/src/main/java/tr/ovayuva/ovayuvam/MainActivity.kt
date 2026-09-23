@@ -763,13 +763,13 @@ private fun FogRevealOverlay(
     Canvas(modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
         cameraTick
         if (map != null && counts.isNotEmpty()) {
-            val opacity = VisitHeat.opacity(map.cameraPosition.zoom)
-            if (opacity > 0) {
+            val zoom = map.cameraPosition.zoom
+            if (VisitHeat.opacity(zoom, 1) > 0) {
                 revealMarks(map, cells, revealCells, currentCell, currentPosition).forEach { mark ->
                     if (mark.kind == RevealCell.Kind.Core) {
                         val position = map.projection.fromScreenLocation(android.graphics.PointF(mark.point.x, mark.point.y))
                         val count = counts[WorldCell.fromLocation(position.latitude, position.longitude)] ?: 0
-                        if (count > 0) drawCircle(Color(VisitHeat.color(count)).copy(alpha = opacity),
+                        if (count > 0) drawCircle(Color(VisitHeat.color(count)).copy(alpha = VisitHeat.opacity(zoom, count)),
                             radius = mark.radiusPx * 0.56f, center = mark.point, blendMode = BlendMode.Src)
                     }
                 }

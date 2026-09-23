@@ -90,7 +90,16 @@ class ReleaseChecks : Instrumentation() {
         check(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk")) { "Emulator only" }
         val repository = VisitRepository(targetContext)
         val baseline = repository.allVisitedCells()
-        repository.importVisitCounts(baseline.map { VisitCount(it.x,it.y, if (it.x % 3 == 0) 8 else if (it.x % 3 == 1) 3 else 1, 1000L, 2000L) })
+        val center = WorldCell.fromLocation(48.863, 2.331)
+        repository.importVisitCounts(baseline.map {
+            val visits = when {
+                it.x < center.x - 10 -> 1
+                it.x < center.x -> 10
+                it.x < center.x + 10 -> 100
+                else -> 365
+            }
+            VisitCount(it.x,it.y,visits,1000L,2000L)
+        })
         repository.close()
         val preferences = VisitPreferences(targetContext)
         val output = File(targetContext.filesDir, "heat-check").apply { mkdirs() }
@@ -107,9 +116,14 @@ class ReleaseChecks : Instrumentation() {
             var map: MapLibreMap? = null
             runOnMainSync { checkNotNull(find(activity.window.decorView)).getMapAsync { map = it; ready.countDown() } }
             check(ready.await(20, TimeUnit.SECONDS))
-            for (zoom in listOf(11.0, 15.6)) {
+            for (zoom in listOf(12.0, 13.0, 14.0, 14.6, 15.6)) {
                 runOnMainSync { map!!.cameraPosition = CameraPosition.Builder().target(LatLng(48.863,2.331)).zoom(zoom).build() }
                 Thread.sleep(12000)
+                var focused = false
+                runOnMainSync { focused = activity.hasWindowFocus() }
+                check(focused) {
+                    "Map is covered by another window at zoom $zoom"
+                }
                 val screenshot = checkNotNull(uiAutomation.takeScreenshot())
                 File(output, "heat-$enabled-$zoom.png").outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG,100,it) }
                 screenshot.recycle()

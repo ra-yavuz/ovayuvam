@@ -37,10 +37,14 @@ fixes provide evidence for stay confirmation and absence, while movement under
 one meter does not repaint the saved trail. The visit repository deduplicates
 fixes received within two seconds of its last accepted observation.
 
-Visit tint is drawn in a separate layer with a maximum opacity of 24%, using
+Visit tint is drawn in a separate layer with an opacity ceiling of 36%, using
 replacement blending so overlapping marks do not accumulate opacity. Color is
 restricted to the fully cleared centers of core reveal brushes. It fades between
-zoom 10 and 12 and is absent at street level. The fog pass is independent and
+zoom 12 and 14.5 and is absent at the default zoom of 15.6 and a small zoom-out.
+Hue and opacity interpolate on a logarithmic visit scale. Each decade from 1 to
+1,000 receives equal space, followed by an asymptotic tail rather than a hard
+visit ceiling. At zoom 12 and below, 1, 10, 100, and 1,000 visits have opacities
+of 12%, 18%, 24%, and 30%. The fog pass is independent and
 retains the same geometry. Old unmeasured cells and road-only glow receive no tint.
 
 Backup payload v2 includes visit counts and accepts v1 payloads. Existing counts

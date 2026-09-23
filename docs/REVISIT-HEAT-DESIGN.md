@@ -1,6 +1,6 @@
 # Revisit heat
 
-Status: implemented in the 0.6.0 tester release, 2026-09-23. Release checks
+Status: implemented in 0.6.0, with a revised visual scale for 0.6.1. Release checks
 are recorded separately from this design.
 
 Audience: ovayuvam product and Android contributors.
@@ -11,23 +11,28 @@ Scope: visit detection, storage, backup, map rendering, and acceptance checks.
 ## Experience
 
 At street level, the usual map and fog remain visible. When the user zooms out
-to see a town or wider area, explored paths gradually gain color according to
+to see several blocks or a wider area, explored paths gradually gain color according to
 how often the user has returned. Unexplored ground keeps exactly the same fog.
 The color reflects return frequency, not time spent standing somewhere.
 
-Use a restrained teal, gold, and coral progression with different lightness as
-well as hue. Suggested visit bands are 1, 2-3, 4-7, and 8+. Keep the scale stable
+Use a restrained teal, green, gold, and coral progression with different lightness
+as well as hue. Interpolate instead of using bands. A logarithmic scale gives
+equal visual space to 1, 10, 100, and 1,000 visits, then approaches the upper
+limit gradually without collapsing all higher counts into one bucket.
+Keep the scale stable
 when panning; entering a different viewport must not change a place's meaning.
 An optional small legend reads "Visits". A settings switch controls the overlay;
 there is no new page or tracking button.
 
-The implemented tint is capped at 24% opacity so the map remains readable.
+The tint has an opacity ceiling of 36% so the map remains readable. At full
+zoom strength, 1, 10, 100, and 1,000 visits use 12%, 18%, 24%, and 30% opacity.
 Replacement blending prevents repeated overlapping brush marks from making it
 opaque. Color is limited to the fully cleared centers of core reveal brushes;
 the independent fog pass retains the original geometry.
 
-Initial visual tuning: fully visible at map zoom 10 and below, smoothly fading
-out between 10 and 12, absent at 12 and above. These are prototype values, to be
+Visual tuning for 0.6.1: full zoom strength at zoom 12 and below, gradually fading
+out between 12 and 14.5, absent at 14.5 and above. The default zoom is 15.6.
+These are initial values, to be
 checked on real phone screens. At country or world scale, narrow trails may
 become subpixel and fade from view. Do not enlarge them to keep them visible.
 

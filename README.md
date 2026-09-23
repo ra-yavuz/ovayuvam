@@ -38,16 +38,19 @@ contains:
 
 ## Download
 
-Version `0.6.0`, Android package `tr.ovayuva.ovayuvam`.
+Version `0.6.1`, Android package `tr.ovayuva.ovayuvam`.
 
 Visit [the product website](https://ovayuvam.ovayuva.tr/) for testing information.
 Tester download links are shared separately. This is not a Google Play release.
 
 Install the update over the existing app to retain your revealed world, goal,
-and settings. Do not uninstall first. Visit counts begin after the update; old
-GPS sample counts cannot tell us how many independent visits took place.
+and settings. Do not uninstall first. Visit counts have been recorded since
+version 0.6.0 and are retained by this update. Earlier GPS sample counts cannot
+tell us how many independent visits took place.
 
-Visit tint reaches at most 24% opacity and disappears when zoomed in. A default
+Visit tint grows gradually with the number of visits, with room to distinguish
+dozens, hundreds, and thousands of returns. It stays below 36% opacity, fades in
+between zoom 14.5 and 12, and is absent at the default close-up view. A default
 150-meter stay radius groups movement around a home or garden; the settings
 sheet allows a larger area. Another visit requires reliable evidence of leaving
 and returning. GPS gaps and uncertain fixes may cause visits to be undercounted.
