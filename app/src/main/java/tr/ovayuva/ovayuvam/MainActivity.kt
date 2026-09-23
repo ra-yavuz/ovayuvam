@@ -35,6 +35,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -69,6 +71,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -91,8 +95,12 @@ import tr.ovayuva.ovayuvam.location.GoalPin
 import tr.ovayuva.ovayuvam.location.GoalState
 import tr.ovayuva.ovayuvam.location.LocationTrailService
 import tr.ovayuva.ovayuvam.location.TrackingState
+import tr.ovayuva.ovayuvam.location.VisitPreferences
+import tr.ovayuva.ovayuvam.location.VisitCount
 import tr.ovayuva.ovayuvam.map.BasemapStyle
+import tr.ovayuva.ovayuvam.map.VisitHeat
 import tr.ovayuva.ovayuvam.storage.VisitRepository
+import tr.ovayuva.ovayuvam.storage.MapWindow
 import tr.ovayuva.ovayuvam.ui.theme.Fog
 import tr.ovayuva.ovayuvam.ui.theme.Forest
 import tr.ovayuva.ovayuvam.ui.theme.Ink
@@ -152,8 +160,14 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     val context = LocalContext.current
     val trackingState = remember { TrackingState(context) }
     val goalState = remember { GoalState(context) }
-    var cells by remember { mutableStateOf(repository.recentCells(4_000)) }
-    var revealCells by remember { mutableStateOf(repository.recentRevealCells(8_000)) }
+    val visitPreferences = remember { VisitPreferences(context) }
+    var showHeat by remember { mutableStateOf(visitPreferences.showHeat) }
+    var stayRadius by remember { mutableIntStateOf(visitPreferences.stayRadius) }
+    var cells by remember { mutableStateOf(emptyList<VisitedCell>()) }
+    var revealCells by remember { mutableStateOf(emptyList<RevealCell>()) }
+    var visits by remember { mutableStateOf(emptyList<VisitCount>()) }
+    var visitsStarted by remember { mutableStateOf<Long?>(null) }
+    var window by remember { mutableStateOf(MapWindow(-85.0, -180.0, 85.0, 180.0, true)) }
     var currentCell by remember { mutableStateOf(trackingState.currentCell()) }
     var currentPosition by remember { mutableStateOf(trackingState.currentPosition()) }
     var goal by remember { mutableStateOf(goalState.goal()) }
@@ -165,8 +179,6 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     var backupPassphrase by remember { mutableStateOf("") }
 
     fun refresh() {
-        cells = repository.recentCells(4_000)
-        revealCells = repository.recentRevealCells(8_000)
         currentCell = trackingState.currentCell()
         currentPosition = trackingState.currentPosition()
         goal = goalState.goal()
@@ -203,6 +215,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 visitedCells = repository.allVisitedCells(),
                 revealCells = repository.allRevealCells(),
                 goal = goal,
+                visitCounts = repository.allVisitCounts(),
             )
             val bytes = WorldBackupCodec.encrypt(backup, backupPassphrase)
             val output = context.contentResolver.openOutputStream(uri)
@@ -223,6 +236,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 ?: error("Could not open the selected backup file.")
             val backup = input.use { WorldBackupCodec.decrypt(it.readBytes(), backupPassphrase) }
             repository.importCells(backup.visitedCells, backup.revealCells)
+            repository.importVisitCounts(backup.visitCounts)
             backup.goal?.let { importedGoal -> goalState.setGoal(importedGoal.position, importedGoal.createdMs) }
             refresh()
             status = "Encrypted world imported"
@@ -246,8 +260,24 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         }
     }
 
+    LaunchedEffect(window) {
+        while (true) {
+            val data = withContext(Dispatchers.IO) { repository.mapData(window) }
+            cells = data.cells
+            revealCells = data.reveal
+            visits = data.visits
+            visitsStarted = withContext(Dispatchers.IO) { repository.visitsStartedMs() }
+            delay(2_000L)
+        }
+    }
+
     if (infoOpen) {
         InfoDialog(
+            showHeat = showHeat,
+            onShowHeatChange = { showHeat = it; visitPreferences.showHeat = it },
+            stayRadius = stayRadius,
+            onStayRadiusChange = { stayRadius = it; visitPreferences.stayRadius = it },
+            visitsStarted = visitsStarted,
             tracking = tracking,
             goal = goal,
             onClearGoal = {
@@ -276,6 +306,8 @@ private fun OvayuvamScreen(repository: VisitRepository) {
 
     Box(Modifier.fillMaxSize().background(Paper)) {
         FogWorldMap(
+            visits = if (showHeat) visits else emptyList(),
+            onWindowChanged = { window = it },
             cells = cells,
             revealCells = revealCells,
             currentCell = currentCell,
@@ -290,7 +322,6 @@ private fun OvayuvamScreen(repository: VisitRepository) {
             },
             onRoadCellsObserved = { cells ->
                 repository.recordRevealCells(cells, RevealCell.Kind.Road)
-                revealCells = repository.recentRevealCells(8_000)
             },
             modifier = Modifier.fillMaxSize(),
         )
@@ -443,6 +474,11 @@ private fun MapIconButton(
 
 @Composable
 private fun InfoDialog(
+    showHeat: Boolean,
+    onShowHeatChange: (Boolean) -> Unit,
+    stayRadius: Int,
+    onStayRadiusChange: (Int) -> Unit,
+    visitsStarted: Long?,
     tracking: Boolean,
     goal: GoalPin?,
     onClearGoal: () -> Unit,
@@ -457,6 +493,17 @@ private fun InfoDialog(
         title = { Text("ovayuvam") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Visit colors", Modifier.weight(1f))
+                    Switch(checked = showHeat, onCheckedChange = onShowHeatChange)
+                }
+                Text("Stay area: $stayRadius m", style = MaterialTheme.typography.bodyMedium)
+                Slider(value = stayRadius.toFloat(), onValueChange = { onStayRadiusChange((it / 50).roundToInt() * 50) },
+                    valueRange = 150f..1000f, steps = 16)
+                Text("Movement within this radius belongs to one stay. A larger radius also groups nearby places together.", style = MaterialTheme.typography.bodySmall)
+                Text(visitsStarted?.let { "Visits counted since ${java.text.DateFormat.getDateInstance().format(java.util.Date(it))}" }
+                    ?: "Visit history starts with your next confirmed visit.", style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(10.dp))
                 Text("Your own world starts immediately after location permission is granted.")
                 Spacer(Modifier.height(10.dp))
                 Text("Long-press the map to place a private goal pin. If the pin is off screen, the arrow points toward it.")
@@ -491,7 +538,7 @@ private fun InfoDialog(
                 Spacer(Modifier.height(10.dp))
                 Text("Privacy policy: https://ovayuva.tr/yuvam/privacy/")
                 Spacer(Modifier.height(10.dp))
-                Text("Map data: ${BasemapStyle.Attribution}. Impressum: Tangelo Bilisim Ltd. Contact: contact@tangelo.com.tr. No warranty is provided.")
+                Text("Map data: ${BasemapStyle.Attribution}. Operator: Ramazan Yavuz. Contact: yavuzramazan1994@gmail.com. No warranty is provided.")
             }
         },
         confirmButton = {
@@ -514,6 +561,8 @@ private fun InfoDialog(
 
 @Composable
 private fun FogWorldMap(
+    visits: List<VisitCount>,
+    onWindowChanged: (MapWindow) -> Unit,
     cells: List<VisitedCell>,
     revealCells: List<RevealCell>,
     currentCell: WorldCell?,
@@ -538,6 +587,7 @@ private fun FogWorldMap(
     }
     var lastRoadRevealPosition by remember { mutableStateOf<GeoPosition?>(null) }
     val latestGoalSelected by rememberUpdatedState(onGoalSelected)
+    val latestWindowChanged by rememberUpdatedState(onWindowChanged)
 
     LaunchedEffect(activeMap, following, currentPosition, currentCell, recenterRequest) {
         val map = activeMap ?: return@LaunchedEffect
@@ -605,7 +655,13 @@ private fun FogWorldMap(
                         }
                     }
                     map.addOnCameraMoveListener { cameraTick += 1 }
-                    map.addOnCameraIdleListener { cameraTick += 1 }
+                    map.addOnCameraIdleListener {
+                        cameraTick += 1
+                        val bounds = map.projection.visibleRegion.latLngBounds
+                        latestWindowChanged(MapWindow(bounds.latitudeSouth, bounds.longitudeWest,
+                            bounds.latitudeNorth, bounds.longitudeEast,
+                            map.cameraPosition.zoom < 2.0 || bounds.longitudeEast - bounds.longitudeWest >= 359.0))
+                    }
                     map.addOnMapLongClickListener { latLng ->
                         latestGoalSelected(GeoPosition(latitude = latLng.latitude, longitude = latLng.longitude))
                         true
@@ -620,6 +676,7 @@ private fun FogWorldMap(
 
         AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
         FogRevealOverlay(
+            visits = visits,
             cells = cells,
             revealCells = revealCells,
             currentCell = currentCell,
@@ -692,6 +749,7 @@ private fun FogWorldMap(
 
 @Composable
 private fun FogRevealOverlay(
+    visits: List<VisitCount>,
     cells: List<VisitedCell>,
     revealCells: List<RevealCell>,
     currentCell: WorldCell?,
@@ -701,6 +759,23 @@ private fun FogRevealOverlay(
     cameraTick: Int,
     modifier: Modifier = Modifier,
 ) {
+    val counts = remember(visits) { visits.associate { WorldCell(it.x, it.y) to it.visits } }
+    Canvas(modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
+        cameraTick
+        if (map != null && counts.isNotEmpty()) {
+            val opacity = VisitHeat.opacity(map.cameraPosition.zoom)
+            if (opacity > 0) {
+                revealMarks(map, cells, revealCells, currentCell, currentPosition).forEach { mark ->
+                    if (mark.kind == RevealCell.Kind.Core) {
+                        val position = map.projection.fromScreenLocation(android.graphics.PointF(mark.point.x, mark.point.y))
+                        val count = counts[WorldCell.fromLocation(position.latitude, position.longitude)] ?: 0
+                        if (count > 0) drawCircle(Color(VisitHeat.color(count)).copy(alpha = opacity),
+                            radius = mark.radiusPx * 0.56f, center = mark.point, blendMode = BlendMode.Src)
+                    }
+                }
+            }
+        }
+    }
     Canvas(
         modifier = modifier.graphicsLayer {
             compositingStrategy = CompositingStrategy.Offscreen
@@ -709,20 +784,20 @@ private fun FogRevealOverlay(
         cameraTick
         drawRect(Fog)
         if (map != null) {
-            drawRevealedPlaces(map, cells, revealCells, currentCell, currentPosition)
+            revealMarks(map, cells, revealCells, currentCell, currentPosition).forEach(::drawRevealBrush)
             currentPosition?.let { drawCurrentDot(map, it) }
             goal?.let { drawGoal(map, it) }
         }
     }
 }
 
-private fun DrawScope.drawRevealedPlaces(
+private fun DrawScope.revealMarks(
     map: MapLibreMap,
     cells: List<VisitedCell>,
     revealCells: List<RevealCell>,
     currentCell: WorldCell?,
     currentPosition: GeoPosition?,
-) {
+): List<RevealMark> {
     val canvasWidth = size.width
     val canvasHeight = size.height
     val visible = buildList {
@@ -764,7 +839,7 @@ private fun DrawScope.drawRevealedPlaces(
             }
         }
     }
-    visible.forEach(::drawRevealBrush)
+    return visible
 }
 
 private fun DrawScope.drawRevealBrush(mark: RevealMark) {

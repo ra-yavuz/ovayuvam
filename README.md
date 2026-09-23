@@ -13,7 +13,7 @@ notification. Hidden tracking is not a goal.
 
 ## Status
 
-This is a production-ready local-first v1 release for sideloaded Android use. It
+This is a local-first Android app distributed to testers outside Google Play. It
 contains:
 
 - A standalone Android project under `app/`.
@@ -24,6 +24,9 @@ contains:
 - Small road/path reveal extensions after fresh movement on the open map, like fog being brushed along nearby streets.
 - Smoother trail recording that filters poor fixes and fills gaps between good GPS points.
 - Strict fog-of-war reveal at every zoom level, without country-scale aggregation.
+- Translucent visit colors when zoomed out, fading away at street level.
+- Local return detection that groups movement within a stay and filters GPS drift.
+- An adjustable stay radius for larger homes or properties.
 - A private goal pin with an off-screen direction arrow.
 - Automatic visible location tracking after permission is granted.
 - A foreground notification that can reflect local progress.
@@ -35,32 +38,23 @@ contains:
 
 ## Download
 
-Current APK release: `0.5.10`.
+Version `0.6.0`, Android package `tr.ovayuva.ovayuvam`.
 
-- Download: [ovayuvam-0.5.10.apk](https://github.com/ra-yavuz/ovayuvam/releases/download/v0.5.10/ovayuvam-0.5.10.apk)
-- Mirror: [ovayuva.tr/yuvam/ovayuvam-0.5.10.apk](https://ovayuva.tr/yuvam/ovayuvam-0.5.10.apk)
-- Package: `tr.ovayuva.ovayuvam`
-- Size: `44,773,087` bytes
-- SHA-256: `cef2beb6e7ccde5780d22f5ce769e4f20533e28d60f18e89a48a514905d45fe6`
+Visit [the product website](https://ovayuvam.ovayuva.tr/) for testing information.
+Tester download links are shared separately. This is not a Google Play release.
 
-Google Play Console uploads should use the signed Android App Bundle:
+Install the update over the existing app to retain your revealed world, goal,
+and settings. Do not uninstall first. Visit counts begin after the update; old
+GPS sample counts cannot tell us how many independent visits took place.
 
-- Bundle: `release/ovayuvam-0.5.10.aab`
-- Bundle SHA-256: `29869ac9e8bc8bcd957040198d461c63e6f3260f9deadbf1dbb6da585589f4cf`
+Visit tint reaches at most 24% opacity and disappears when zoomed in. A default
+150-meter stay radius groups movement around a home or garden; the settings
+sheet allows a larger area. Another visit requires reliable evidence of leaving
+and returning. GPS gaps and uncertain fixes may cause visits to be undercounted.
 
-Version 0.5.10 restores a simple square-meter progress line for the evening
-notification. It counts only unique core reveal cells first seen today, ignores
-road/path glow cells, and keeps the wording approximate. It does not use hectares.
-If there is movement but no reliable new reveal area, it falls back to today's
-walked distance.
-
-Version 0.5.10 does not paint road/path reveal just because the map opens. The
-first visible position after opening only seeds the road tracker. Nearby road and
-path reveal cells are added after fresh movement while the map is open.
-
-Version 0.5.10 includes manual encrypted export/import. The backup file includes
-revealed cells and the optional goal pin. It is encrypted with a passphrase chosen
-by the user. ovayuvam cannot recover that passphrase.
+Encrypted backups include revealed cells, visit counts, and the optional goal
+pin. Older backups remain readable. Keep your passphrase; ovayuvam cannot recover
+it. This feature does not add accounts, automatic cloud sync, or friend sharing.
 
 This is a sideloaded APK outside Google Play. Android may ask you to allow
 installation from your browser or file manager. If a browser reaches 100 percent

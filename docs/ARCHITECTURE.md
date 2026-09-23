@@ -18,6 +18,35 @@ ovayuva account. It uses internet access only for the real basemap.
 
 ## Storage
 
+Version 0.6.0 adds `visit_zones` and `visit_counts` through database migration 3.
+Existing visited/reveal rows are unchanged. A stable geographic stay anchor and
+a configurable 150-1,000 meter radius group local movement. Accurate observations
+must establish ten minutes beyond an additional 100 meter exit buffer before
+three return fixes over ten seconds can start another visit. Counts increase at
+most once per observed cell in a stay epoch. Missing GPS does not prove absence.
+Monotonic observation time and Android's boot count protect pending timers.
+
+`VisitDetector` contains the pure decision logic. `VisitRepository` persists the
+state and increments in one transaction. Location callbacks run on a service
+worker thread. The map reads viewport-bounded history on an IO dispatcher without
+the former 8,000-cell cutoff. Far, already departed zones are excluded from normal
+presence updates until approached again.
+
+The existing one-second location request also delivers stationary fixes. Those
+fixes provide evidence for stay confirmation and absence, while movement under
+one meter does not repaint the saved trail. The visit repository deduplicates
+fixes received within two seconds of its last accepted observation.
+
+Visit tint is drawn in a separate layer with a maximum opacity of 24%, using
+replacement blending so overlapping marks do not accumulate opacity. Color is
+restricted to the fully cleared centers of core reveal brushes. It fades between
+zoom 10 and 12 and is absent at street level. The fog pass is independent and
+retains the same geometry. Old unmeasured cells and road-only glow receive no tint.
+
+Backup payload v2 includes visit counts and accepts v1 payloads. Existing counts
+merge by maximum, making repeated imports idempotent. Independent device counts
+are not additive. Detection state is reset conservatively on import.
+
 The local database stores grid cells, first seen time, last seen time, and sample
 count. It does not store raw route uploads. This still counts as sensitive
 location history because repeated cells can reveal routines.

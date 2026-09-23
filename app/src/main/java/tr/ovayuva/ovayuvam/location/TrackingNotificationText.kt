@@ -1,7 +1,6 @@
 package tr.ovayuva.ovayuvam.location
 
 import java.time.Instant
-import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -23,7 +22,7 @@ object TrackingNotificationText {
         if (daysSinceProgress != null && daysSinceProgress >= InactiveDays) {
             return "Let's expand your world map. Tap to reveal a new way."
         }
-        val hour = LocalTime.ofInstant(Instant.ofEpochMilli(stats.nowMs), zoneId).hour
+        val hour = Instant.ofEpochMilli(stats.nowMs).atZone(zoneId).hour
         if (hour >= 19 && stats.hasProgressToday) {
             return if (stats.todayRevealedSquareMeters >= MinimumAreaForNotificationSquareMeters) {
                 "Today you revealed about ${formatSquareMeters(stats.todayRevealedSquareMeters)} of your map."

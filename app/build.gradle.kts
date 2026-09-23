@@ -20,10 +20,10 @@ android {
         applicationId = "tr.ovayuva.ovayuvam"
         minSdk = 26
         targetSdk = 36
-        versionCode = 19
-        versionName = "0.5.10"
+        versionCode = 22
+        versionName = "0.6.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "tr.ovayuva.ovayuvam.ReleaseChecks"
     }
 
     signingConfigs {
@@ -38,6 +38,11 @@ android {
     }
 
     buildTypes {
+        create("verification") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".verification"
+            matchingFallbacks += "debug"
+        }
         release {
             isMinifyEnabled = true
             if (keystoreProps.isNotEmpty()) {
@@ -62,6 +67,7 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+    testBuildType = "verification"
 }
 
 kotlin {
@@ -84,6 +90,8 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.json)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.material3)
 
     debugImplementation(libs.androidx.ui.tooling)
 }

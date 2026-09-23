@@ -6,6 +6,7 @@ import tr.ovayuva.ovayuvam.domain.GeoPosition
 import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.VisitedCell
 import tr.ovayuva.ovayuvam.location.GoalPin
+import tr.ovayuva.ovayuvam.location.VisitCount
 import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
@@ -19,12 +20,13 @@ data class WorldBackup(
     val revealCells: List<RevealCell>,
     val goal: GoalPin?,
     val exportedMs: Long = System.currentTimeMillis(),
+    val visitCounts: List<VisitCount> = emptyList(),
 )
 
 object WorldBackupCodec {
     const val MinPassphraseLength = 8
     private const val Format = "ovayuvam.encrypted-world.v1"
-    private const val PlainFormat = "ovayuvam.world.v1"
+    private const val PlainFormat = "ovayuvam.world.v2"
     private const val Iterations = 210_000
     private const val KeyBits = 256
     private const val GcmBits = 128
@@ -104,6 +106,11 @@ object WorldBackupCodec {
             .put("exportedMs", backup.exportedMs)
             .put("visitedCells", visited)
             .put("revealCells", reveal)
+            .put("visitCounts", JSONArray().apply {
+                backup.visitCounts.forEach { count -> put(JSONObject()
+                    .put("x", count.x).put("y", count.y).put("visits", count.visits)
+                    .put("firstVisitMs", count.firstVisitMs).put("lastVisitMs", count.lastVisitMs)) }
+            })
             .put(
                 "goal",
                 backup.goal?.let { goal ->
@@ -116,9 +123,9 @@ object WorldBackupCodec {
             .toString()
     }
 
-    private fun fromPlainJson(json: String): WorldBackup {
+    internal fun fromPlainJson(json: String): WorldBackup {
         val root = JSONObject(json)
-        require(root.getString("format") == PlainFormat) { "Unsupported backup payload." }
+        require(root.getString("format") in listOf(PlainFormat, "ovayuvam.world.v1")) { "Unsupported backup payload." }
         val visited = root.getJSONArray("visitedCells").mapVisited { item ->
             VisitedCell(
                 x = item.getInt("x"),
@@ -155,6 +162,15 @@ object WorldBackupCodec {
             revealCells = reveal,
             goal = goal,
             exportedMs = root.getLong("exportedMs"),
+            visitCounts = root.optJSONArray("visitCounts")?.let { counts ->
+                List(counts.length()) { index ->
+                    val item = counts.getJSONObject(index)
+                    VisitCount(item.getInt("x"), item.getInt("y"), item.getInt("visits"),
+                        item.getLong("firstVisitMs"), item.getLong("lastVisitMs")).also {
+                        require(it.visits >= 0 && it.firstVisitMs >= 0 && it.lastVisitMs >= it.firstVisitMs) { "Invalid visit count." }
+                    }
+                }
+            } ?: emptyList(),
         )
     }
 

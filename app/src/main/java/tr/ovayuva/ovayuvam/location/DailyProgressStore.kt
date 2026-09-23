@@ -2,7 +2,6 @@ package tr.ovayuva.ovayuvam.location
 
 import android.content.Context
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 
 data class DailyProgress(
@@ -42,7 +41,7 @@ class DailyProgressStore(context: Context) {
     }
 
     private fun dayKey(nowMs: Long): String =
-        LocalDate.ofInstant(Instant.ofEpochMilli(nowMs), ZoneId.systemDefault()).toString()
+        Instant.ofEpochMilli(nowMs).atZone(ZoneId.systemDefault()).toLocalDate().toString()
 
     private companion object {
         const val KEY_DAY = "day"

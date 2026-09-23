@@ -10,6 +10,16 @@ class TrackingNotificationTextTest {
     private val zone = ZoneId.of("Europe/Istanbul")
 
     @Test
+    fun eveningSummaryUsesTheRequestedTimeZone() {
+        val now = LocalDateTime.of(2026, 9, 21, 17, 0)
+            .atZone(ZoneId.of("UTC")).toInstant().toEpochMilli()
+        val stats = TrackingNotificationStats(800, 200f, now, now)
+
+        assertEquals("Today you revealed about 800 m² of your map.", TrackingNotificationText.text(stats, zone))
+        assertTrue(!TrackingNotificationText.text(stats, ZoneId.of("UTC")).startsWith("Today"))
+    }
+
+    @Test
     fun eveningTextSummarizesTodayRevealAreaInSquareMeters() {
         val now = LocalDateTime.of(2026, 9, 20, 21, 15).atZone(zone).toInstant().toEpochMilli()
         val text = TrackingNotificationText.text(

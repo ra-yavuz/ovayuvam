@@ -8,8 +8,19 @@ import tr.ovayuva.ovayuvam.domain.GeoPosition
 import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.VisitedCell
 import tr.ovayuva.ovayuvam.location.GoalPin
+import tr.ovayuva.ovayuvam.location.VisitCount
 
 class WorldBackupCodecTest {
+    @Test
+    fun originalBackupPayloadKeepsWorldWithoutInventingVisits() {
+        val backup = WorldBackupCodec.fromPlainJson("""{"format":"ovayuvam.world.v1","exportedMs":400,
+            "visitedCells":[{"x":12,"y":34,"firstSeenMs":100,"lastSeenMs":200,"samples":999}],
+            "revealCells":[{"x":13,"y":35,"kind":0,"firstSeenMs":120,"lastSeenMs":220,"samples":8}],"goal":null}""")
+        assertEquals(999, backup.visitedCells.single().samples)
+        assertEquals(8, backup.revealCells.single().samples)
+        assertTrue(backup.visitCounts.isEmpty())
+    }
+
     @Test
     fun encryptedBackupRoundTripsWithPassphrase() {
         val backup = WorldBackup(
@@ -17,6 +28,7 @@ class WorldBackupCodecTest {
             revealCells = listOf(RevealCell(13, 35, RevealCell.Kind.Road, 120L, 220L, 2)),
             goal = GoalPin(GeoPosition(41.0, 29.0), 300L),
             exportedMs = 400L,
+            visitCounts = listOf(VisitCount(12, 34, 7, 100L, 200L)),
         )
 
         val encrypted = WorldBackupCodec.encrypt(backup, "correct horse")

@@ -17,7 +17,9 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import android.os.Looper
+import android.os.HandlerThread
+import android.os.SystemClock
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -25,6 +27,7 @@ import tr.ovayuva.ovayuvam.MainActivity
 import tr.ovayuva.ovayuvam.R
 import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
+import tr.ovayuva.ovayuvam.domain.GeoPosition
 import tr.ovayuva.ovayuvam.storage.VisitRepository
 import java.time.LocalDate
 import java.time.ZoneId
@@ -39,6 +42,9 @@ class LocationTrailService : Service() {
     private var lastAcceptedLocation: Location? = null
     private var lastNotificationText: String? = null
     private var lastNotificationRefreshMs: Long = 0L
+    private val worker = HandlerThread("world-trail")
+    private lateinit var visitPreferences: VisitPreferences
+    private var bootId: Int = -1
 
     override fun onCreate() {
         super.onCreate()
@@ -46,6 +52,9 @@ class LocationTrailService : Service() {
         repository = VisitRepository(this)
         trackingState = TrackingState(this)
         progressStore = DailyProgressStore(this)
+        visitPreferences = VisitPreferences(this)
+        bootId = Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1)
+        worker.start()
         ensureChannel()
     }
 
@@ -64,6 +73,7 @@ class LocationTrailService : Service() {
 
     override fun onDestroy() {
         stopTracking()
+        worker.quitSafely()
         super.onDestroy()
     }
 
@@ -93,9 +103,9 @@ class LocationTrailService : Service() {
                 locationManager.requestLocationUpdates(
                     provider,
                     1_000L,
-                    1f,
+                    0f,
                     next,
-                    Looper.getMainLooper(),
+                    worker.looper,
                 )
                 registered = true
             }
@@ -106,7 +116,7 @@ class LocationTrailService : Service() {
                 .mapNotNull { provider -> runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull() }
                 .filter { it.isFreshEnoughForSeed(System.currentTimeMillis()) }
                 .maxByOrNull { it.time }
-                ?.let(next::onLocationChanged)
+                ?.let { seed -> android.os.Handler(worker.looper).post { next.onLocationChanged(seed) } }
         } else {
             trackingState.setTracking(false)
             stopSelf()
@@ -123,9 +133,21 @@ class LocationTrailService : Service() {
 
     private fun acceptLocation(location: Location) {
         val now = System.currentTimeMillis()
-        if (!location.isUsable(now)) return
+        if (!location.isUsable(now)) {
+            repository.interruptPresence()
+            return
+        }
+        val ageMs = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) / 1_000_000
+        if (location.hasAccuracy() && ageMs in 0..15_000) {
+            repository.recordPresence(
+                VisitFix(GeoPosition(location.latitude, location.longitude), location.accuracy.toDouble(),
+                    now, location.elapsedRealtimeNanos / 1_000_000, bootId),
+                visitPreferences.stayRadius.toDouble(),
+            )
+        } else repository.interruptPresence()
         val previous = lastAcceptedLocation
-        recordTrail(previous, location, now)
+        // Still fixes confirm a stay, but do not need to repaint the saved trail.
+        if (previous == null || previous.distanceTo(location) >= 1f) recordTrail(previous, location, now)
         val movedMeters = previous
             ?.takeIf { it.distanceTo(location) <= MaxInterpolatedTrailMeters }
             ?.distanceTo(location)

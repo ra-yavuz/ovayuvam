@@ -11,6 +11,9 @@ The app records:
 - First seen time.
 - Last seen time.
 - Sample count per cell.
+- Confirmed visit counts and their first and most recent arrival times.
+- Approximate stay anchors, the chosen stay radius, and departure/arrival state
+  used to avoid counting local movement or GPS drift as repeated visits.
 - Goal pin latitude and longitude, if the user sets a goal.
 - Today's accepted walking distance and latest progress time, used for notification text.
 
@@ -38,6 +41,12 @@ Android automatic backup and device transfer are disabled in version 1. Version
 manual encrypted export/import. Exported files are sensitive location history even
 though they are encrypted. The user must keep the backup file and passphrase;
 ovayuvam cannot recover the passphrase.
+
+Version 0.6.0 includes confirmed visit counts in encrypted exports. Live stay
+detection state is not exported. Reimporting a backup does not add its counts to
+existing counts. Visit colors and stay detection use existing location updates
+and do not send these records to any server. Older maps remain intact on update;
+their sample counts are not converted into historical visit counts.
 
 A later backup feature can use the user's Google Drive only after a clear opt-in.
 The backup should be encrypted on the device before upload. The app should not hold
