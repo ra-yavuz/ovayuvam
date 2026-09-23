@@ -29,7 +29,8 @@ contains:
 - An adjustable stay radius for larger homes or properties.
 - A private goal pin with an off-screen direction arrow.
 - Automatic visible location tracking after permission is granted.
-- A foreground notification that can reflect local progress.
+- A silent foreground notification with rotating messages and local progress.
+- A read-only replay of first discoveries, by week, month, year, or all time.
 - Manual encrypted export/import from the info sheet.
 - A small info sheet with privacy, contact, and legal details.
 - Ovayuva-style hand-drawn colors, fonts, and map controls.
@@ -38,7 +39,7 @@ contains:
 
 ## Download
 
-Version `0.6.1`, Android package `tr.ovayuva.ovayuvam`.
+Version `0.7.0`, Android package `tr.ovayuva.ovayuvam`.
 
 Visit [the product website](https://ovayuvam.ovayuva.tr/) for testing information.
 Tester download links are shared separately. This is not a Google Play release.
@@ -47,6 +48,17 @@ Install the update over the existing app to retain your revealed world, goal,
 and settings. Do not uninstall first. Visit counts have been recorded since
 version 0.6.0 and are retained by this update. Earlier GPS sample counts cannot
 tell us how many independent visits took place.
+
+Open the info sheet and choose **Watch your world grow** to replay your saved
+discoveries. Pause, seek to a date, or choose a week, month, year, or all-time
+view. Earlier discoveries remain visible at the start of a shorter period.
+Replay does not change saved history or stop tracking. It reconstructs first
+discoveries, not an exact route or past visit colors.
+
+The existing tracking notification rotates through 83 short messages about every
+90 minutes while the service runs. Updates are silent and replace the same
+notification. No separate reminders or wake-up alarms are scheduled. Android
+may delay a change while the phone sleeps. Evening progress summaries remain.
 
 Visit tint grows gradually with the number of visits, with room to distinguish
 dozens, hundreds, and thousands of returns. It stays below 36% opacity, fades in
@@ -90,6 +102,10 @@ checked-in wrapper:
 
 The repo also includes a minimal container recipe in `docker/` for local Android
 builds without installing the toolchain on your machine.
+
+The optional [Play internal-release workflow](docs/PLAY-AUTOMATION.md) can build
+and upload signed bundles from release tags. It stays disabled until dedicated
+credentials are configured. It never targets production.
 
 ## Safety and privacy
 

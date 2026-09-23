@@ -2,6 +2,8 @@ package tr.ovayuva.ovayuvam.location
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -15,7 +17,7 @@ class TrackingNotificationTextTest {
             .atZone(ZoneId.of("UTC")).toInstant().toEpochMilli()
         val stats = TrackingNotificationStats(800, 200f, now, now)
 
-        assertEquals("Today you revealed about 800 m² of your map.", TrackingNotificationText.text(stats, zone))
+        assertEquals("Today you revealed about 800 m² of your map.", TrackingNotificationText.text(stats, zone).substringBefore('\n'))
         assertTrue(!TrackingNotificationText.text(stats, ZoneId.of("UTC")).startsWith("Today"))
     }
 
@@ -32,7 +34,7 @@ class TrackingNotificationTextTest {
             zone,
         )
 
-        assertEquals("Today you revealed about 11,200 m² of your map.", text)
+        assertEquals("Today you revealed about 11,200 m² of your map.", text.substringBefore('\n'))
     }
 
     @Test
@@ -48,7 +50,7 @@ class TrackingNotificationTextTest {
             zone,
         )
 
-        assertEquals("Today you walked about 1.7 km through the fog.", text)
+        assertEquals("Today you walked about 1.7 km through the fog.", text.substringBefore('\n'))
     }
 
     @Test
@@ -64,7 +66,7 @@ class TrackingNotificationTextTest {
             zone,
         )
 
-        assertEquals("A little more of your world is visible today.", text)
+        assertEquals("A little more of your world is visible today.", text.substringBefore('\n'))
     }
 
     @Test
@@ -82,7 +84,9 @@ class TrackingNotificationTextTest {
             zone,
         )
 
-        assertEquals("Let's expand your world map. Tap to reveal a new way.", text)
+        assertTrue(text.isNotBlank())
+        assertFalse(text.contains("Tap"))
+        assertFalse(text.contains("Let's expand"))
     }
 
     @Test
@@ -100,5 +104,37 @@ class TrackingNotificationTextTest {
         )
 
         assertTrue(text.isNotBlank())
+    }
+
+    @Test fun manyGentleMessagesStayStableWithinEachRotation() {
+        val rotation = TrackingNotificationText.RotationMs
+        val start = 100_000L * rotation
+        val messages = (0..105).map { slot ->
+            val now = start + slot * rotation + 1000L
+            val stats = TrackingNotificationStats(0, 0f, null, now)
+            val text = TrackingNotificationText.text(stats, zone)
+            assertEquals(text, TrackingNotificationText.text(stats.copy(nowMs = now + 60_000L), zone))
+            assertTrue(text.length <= 100)
+            text
+        }
+        assertTrue(messages.toSet().size >= 50)
+        messages.zipWithNext().forEach { (first, second) -> assertNotEquals(first, second) }
+    }
+
+    @Test fun eveningSummaryKeepsItsFactsWhileTheCompanionLineRotates() {
+        val now = LocalDateTime.of(2026, 9, 23, 20, 0).atZone(zone).toInstant().toEpochMilli()
+        val stats = TrackingNotificationStats(1200, 100f, now, now)
+        val first = TrackingNotificationText.text(stats, zone)
+        val next = TrackingNotificationText.text(stats.copy(nowMs = now + TrackingNotificationText.RotationMs), zone)
+        assertEquals(first.substringBefore('\n'), next.substringBefore('\n'))
+        assertNotEquals(first.substringAfter('\n'), next.substringAfter('\n'))
+    }
+
+    @Test fun nextRotationIsAlwaysInTheFutureAndHandlesClockChanges() {
+        val rotation = TrackingNotificationText.RotationMs
+        assertEquals(rotation, TrackingNotificationText.nextRotationDelay(0))
+        assertEquals(1L, TrackingNotificationText.nextRotationDelay(rotation - 1))
+        assertEquals(rotation, TrackingNotificationText.nextRotationDelay(rotation))
+        assertEquals(1L, TrackingNotificationText.nextRotationDelay(-1))
     }
 }

@@ -16,7 +16,6 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" \
     && rm -rf /tmp/cmdline-tools.zip /tmp/android-tools
 
 RUN yes | sdkmanager --licenses >/dev/null \
-    && sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+    && sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"
 
 WORKDIR /work
-

@@ -1,0 +1,85 @@
+name: Release to Play internal testing
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovayuvam-play-internal
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'ra-yavuz/ovayuvam' && vars.PLAY_INTERNAL_RELEASES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: google-play
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check release tag
+        run: |
+          [[ "$GITHUB_REF" == refs/tags/v* ]]
+          git merge-base --is-ancestor HEAD origin/main
+          docker run --rm --cpus 1 --memory 128m -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$PWD:/work:ro" -w /work python:3.12-slim \
+            python -m unittest discover -s tools -p 'test_*.py'
+      - name: Prepare signing files
+        env:
+          PLAY_UPLOAD_KEYSTORE_BASE64: ${{ secrets.PLAY_UPLOAD_KEYSTORE_BASE64 }}
+          PLAY_UPLOAD_STORE_PASSWORD: ${{ secrets.PLAY_UPLOAD_STORE_PASSWORD }}
+          PLAY_UPLOAD_KEY_ALIAS: ${{ secrets.PLAY_UPLOAD_KEY_ALIAS }}
+          PLAY_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAY_UPLOAD_KEY_PASSWORD }}
+        run: python3 tools/play_release.py prepare
+      - name: Check Play credential configuration
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          value = json.loads(os.environ['PLAY_SERVICE_ACCOUNT_JSON'])
+          assert value.get('type') == 'service_account', 'A dedicated service-account credential is required.'
+          assert value.get('client_email') and value.get('private_key'), 'Incomplete Play credential.'
+          PY
+      - name: Build and verify in Docker
+        run: |
+          docker build -f docker/Dockerfile -t ovayuvam-release docker
+          docker run --rm --cpus 2 --memory 4g --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp -v "$PWD:/work" -v "$RUNNER_TEMP/play-signing:/run/secrets:ro" \
+            ovayuvam-release sh -ec '
+              ./gradlew --no-daemon --max-workers=1 testReleaseUnitTest lintRelease assembleRelease bundleRelease
+              /opt/android-sdk/build-tools/36.0.0/apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk > /tmp/signature.txt
+              grep -Fx "Signer #1 certificate SHA-256 digest: 41a682a94ae3098fb09bf3e984be9c591f3093329618d057a59b3f922719873e" /tmp/signature.txt
+              jarsigner -verify app/build/outputs/bundle/release/app-release.aab > /tmp/bundle-signature.txt
+              grep -F "jar verified." /tmp/bundle-signature.txt
+              keytool -printcert -jarfile app/build/outputs/bundle/release/app-release.aab > /tmp/bundle-cert.txt
+              grep -F "SHA256: 41:A6:82:A9:4A:E3:09:8F:B0:9B:F3:E9:84:BE:9C:59:1F:30:93:32:96:18:D0:57:A5:9B:3F:92:27:19:87:3E" /tmp/bundle-cert.txt
+            '
+          python3 tools/play_release.py verify
+      - name: Release bundle to internal testers
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: tr.ovayuva.ovayuvam
+          releaseFiles: app/build/outputs/bundle/release/app-release.aab
+          releaseName: ${{ github.ref_name }}
+          tracks: internal
+          status: completed
+          whatsNewDirectory: store/google-play/whatsnew
+          mappingFile: app/build/outputs/mapping/release/mapping.txt
+          changesNotSentForReview: false
+      - name: Record successful upload
+        run: |
+          sha256sum -c "$RUNNER_TEMP/play-bundle.sha256"
+          printf 'Google accepted the internal-track release for %s. Production was not changed.\n' "$GITHUB_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove signing files
+        if: always()
+        run: |
+          rm -f keystore.properties
+          rm -rf "$RUNNER_TEMP/play-signing"

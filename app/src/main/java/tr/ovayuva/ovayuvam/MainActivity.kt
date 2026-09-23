@@ -10,6 +10,7 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -42,10 +44,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -58,6 +62,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -69,14 +76,17 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
@@ -99,6 +109,10 @@ import tr.ovayuva.ovayuvam.location.VisitPreferences
 import tr.ovayuva.ovayuvam.location.VisitCount
 import tr.ovayuva.ovayuvam.map.BasemapStyle
 import tr.ovayuva.ovayuvam.map.VisitHeat
+import tr.ovayuva.ovayuvam.map.WorldGrowth
+import tr.ovayuva.ovayuvam.map.GrowthPeriod
+import tr.ovayuva.ovayuvam.map.GrowthBounds
+import tr.ovayuva.ovayuvam.ui.GrowthControls
 import tr.ovayuva.ovayuvam.storage.VisitRepository
 import tr.ovayuva.ovayuvam.storage.MapWindow
 import tr.ovayuva.ovayuvam.ui.theme.Fog
@@ -177,6 +191,55 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     var recenterRequest by remember { mutableIntStateOf(0) }
     var following by remember { mutableStateOf(true) }
     var backupPassphrase by remember { mutableStateOf("") }
+    var replayOpen by rememberSaveable { mutableStateOf(false) }
+    var replayPeriod by rememberSaveable { mutableStateOf(GrowthPeriod.All) }
+    var replayFraction by rememberSaveable { mutableFloatStateOf(0f) }
+    var replayPlaying by rememberSaveable { mutableStateOf(true) }
+    var growth by remember { mutableStateOf<WorldGrowth?>(null) }
+    var replayPanelHeightPx by remember { mutableIntStateOf(0) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val replayRange = remember(growth, replayPeriod) { growth?.range(replayPeriod) }
+    val replayHasDiscoveries = remember(growth, replayRange) {
+        replayRange?.let { growth?.hasDiscoveries(it) } == true
+    }
+    val replayTime = replayRange?.timeAt(replayFraction)
+    val replayFrame = remember(growth, replayTime) { replayTime?.let { growth?.at(it) } }
+
+    BackHandler(enabled = replayOpen) { replayOpen = false }
+
+    LaunchedEffect(replayOpen) {
+        growth = null
+        if (!replayOpen) return@LaunchedEffect
+        try {
+            val snapshot = withContext(Dispatchers.IO) {
+                WorldGrowth(repository.allVisitedCells(), repository.allRevealCells(), System.currentTimeMillis())
+            }
+            if (snapshot.hasHistory) growth = snapshot else {
+                replayOpen = false
+                status = "No discoveries to replay yet."
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            replayOpen = false
+            status = "Could not open replay: ${error.userMessage()}"
+        }
+    }
+
+    LaunchedEffect(replayOpen, growth, replayPlaying, replayPeriod, replayHasDiscoveries, lifecycle) {
+        if (!replayOpen || growth == null || !replayPlaying) return@LaunchedEffect
+        if (!replayHasDiscoveries) {
+            replayPlaying = false
+            return@LaunchedEffect
+        }
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (replayFraction < 1f) {
+                delay(200L)
+                replayFraction = (replayFraction + 1f / 120f).coerceAtMost(1f)
+            }
+            replayPlaying = false
+        }
+    }
 
     fun refresh() {
         currentCell = trackingState.currentCell()
@@ -260,7 +323,8 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         }
     }
 
-    LaunchedEffect(window) {
+    LaunchedEffect(window, replayOpen) {
+        if (replayOpen) return@LaunchedEffect
         while (true) {
             val data = withContext(Dispatchers.IO) { repository.mapData(window) }
             cells = data.cells
@@ -273,6 +337,13 @@ private fun OvayuvamScreen(repository: VisitRepository) {
 
     if (infoOpen) {
         InfoDialog(
+            onReplay = {
+                infoOpen = false
+                replayPeriod = GrowthPeriod.All
+                replayFraction = 0f
+                replayPlaying = true
+                replayOpen = true
+            },
             showHeat = showHeat,
             onShowHeatChange = { showHeat = it; visitPreferences.showHeat = it },
             stayRadius = stayRadius,
@@ -306,19 +377,24 @@ private fun OvayuvamScreen(repository: VisitRepository) {
 
     Box(Modifier.fillMaxSize().background(Paper)) {
         FogWorldMap(
-            visits = if (showHeat) visits else emptyList(),
+            visits = if (showHeat && !replayOpen) visits else emptyList(),
+            replayOpen = replayOpen,
+            replayBounds = growth?.bounds,
+            replayPanelHeightPx = replayPanelHeightPx,
             onWindowChanged = { window = it },
-            cells = cells,
-            revealCells = revealCells,
-            currentCell = currentCell,
-            currentPosition = currentPosition,
-            goal = goal,
-            following = following,
+            cells = if (growth != null && replayOpen) replayFrame?.cells.orEmpty() else cells,
+            revealCells = if (growth != null && replayOpen) replayFrame?.reveal.orEmpty() else revealCells,
+            currentCell = if (replayOpen) null else currentCell,
+            currentPosition = if (replayOpen) null else currentPosition,
+            goal = if (replayOpen) null else goal,
+            following = following && !replayOpen,
             recenterRequest = recenterRequest,
-            onUserMovedMap = { following = false },
+            onUserMovedMap = { if (!replayOpen) following = false },
             onGoalSelected = { position ->
-                goal = goalState.setGoal(position)
-                status = "Goal set"
+                if (!replayOpen) {
+                    goal = goalState.setGoal(position)
+                    status = "Goal set"
+                }
             },
             onRoadCellsObserved = { cells ->
                 repository.recordRevealCells(cells, RevealCell.Kind.Road)
@@ -343,7 +419,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 .padding(end = 12.dp, top = 12.dp),
         )
 
-        MapIconButton(
+        if (!replayOpen) MapIconButton(
             icon = R.drawable.art_recenter,
             label = "Center map on me",
             enabled = currentPosition != null || currentCell != null,
@@ -357,14 +433,41 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 .padding(end = 12.dp, bottom = 12.dp),
         )
 
-        Column(
+        if (replayOpen) Column(
+            Modifier.align(Alignment.BottomCenter).onSizeChanged { replayPanelHeightPx = it.height }
+                .navigationBarsPadding().padding(12.dp),
+        ) {
+            if (replayTime != null) {
+                GrowthControls(
+                    period = replayPeriod,
+                    onPeriodChange = { replayPeriod = it; replayFraction = 0f; replayPlaying = true },
+                    fraction = replayFraction,
+                    onSeek = { replayPlaying = false; replayFraction = it },
+                    dateMs = replayTime,
+                    playing = replayPlaying,
+                    hasDiscoveries = replayHasDiscoveries,
+                    onPlayPause = {
+                        if (replayFraction >= 1f) replayFraction = 0f
+                        replayPlaying = !replayPlaying
+                    },
+                    onRestart = { replayFraction = 0f; replayPlaying = true },
+                    onClose = { replayOpen = false },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                StatusPill("Opening your world...")
+                TextButton(onClick = { replayOpen = false }) { Text("Cancel") }
+            }
+            Spacer(Modifier.height(8.dp))
+            AttributionPill()
+        } else Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .navigationBarsPadding()
                 .padding(start = 12.dp, bottom = 12.dp, end = 84.dp),
         ) {
             if (!tracking || currentCell == null || status != "Revealing your world") {
-                StatusPill(text = if (!tracking) status else "Finding your place")
+                StatusPill(text = if (status != "Revealing your world") status else "Finding your place")
                 Spacer(Modifier.height(8.dp))
             }
             AttributionPill()
@@ -474,6 +577,7 @@ private fun MapIconButton(
 
 @Composable
 private fun InfoDialog(
+    onReplay: () -> Unit,
     showHeat: Boolean,
     onShowHeatChange: (Boolean) -> Unit,
     stayRadius: Int,
@@ -493,6 +597,8 @@ private fun InfoDialog(
         title = { Text("ovayuvam") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                TextButton(onClick = onReplay) { Text("Watch your world grow") }
+                Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Visit colors", Modifier.weight(1f))
                     Switch(checked = showHeat, onCheckedChange = onShowHeatChange)
@@ -562,6 +668,9 @@ private fun InfoDialog(
 @Composable
 private fun FogWorldMap(
     visits: List<VisitCount>,
+    replayOpen: Boolean,
+    replayBounds: GrowthBounds?,
+    replayPanelHeightPx: Int,
     onWindowChanged: (MapWindow) -> Unit,
     cells: List<VisitedCell>,
     revealCells: List<RevealCell>,
@@ -588,6 +697,31 @@ private fun FogWorldMap(
     var lastRoadRevealPosition by remember { mutableStateOf<GeoPosition?>(null) }
     val latestGoalSelected by rememberUpdatedState(onGoalSelected)
     val latestWindowChanged by rememberUpdatedState(onWindowChanged)
+    val latestUserMovedMap by rememberUpdatedState(onUserMovedMap)
+    var beforeReplayCamera by remember { mutableStateOf<CameraPosition?>(null) }
+    val density = LocalDensity.current.density
+    var mapSize by remember { mutableStateOf(IntSize.Zero) }
+
+    LaunchedEffect(activeMap, replayOpen, replayBounds, mapSize, replayPanelHeightPx) {
+        val map = activeMap ?: return@LaunchedEffect
+        if (replayOpen) {
+            if (beforeReplayCamera == null) beforeReplayCamera = map.cameraPosition
+            replayBounds?.let { bounds ->
+                if (mapSize.height <= 0 || mapSize.width <= 0) return@let
+                val padding = (24 * density).roundToInt()
+                val area = LatLngBounds.from(
+                    (bounds.north + 0.0005).coerceAtMost(85.0), bounds.east + 0.0005,
+                    (bounds.south - 0.0005).coerceAtLeast(-85.0), bounds.west - 0.0005,
+                )
+                map.animateCamera(CameraUpdateFactory.newLatLngBounds(area, padding,
+                    min((104 * density).roundToInt(), mapSize.height / 5), padding,
+                    min(replayPanelHeightPx + padding, mapSize.height * 3 / 4)), 650)
+            }
+        } else {
+            beforeReplayCamera?.let { if (!following) map.moveCamera(CameraUpdateFactory.newCameraPosition(it)) }
+            beforeReplayCamera = null
+        }
+    }
 
     LaunchedEffect(activeMap, following, currentPosition, currentCell, recenterRequest) {
         val map = activeMap ?: return@LaunchedEffect
@@ -620,7 +754,7 @@ private fun FogWorldMap(
         }
     }
 
-    Box(modifier) {
+    Box(modifier.onSizeChanged { mapSize = it }) {
         val mapView = remember {
             MapLibre.getInstance(context)
             MapView(
@@ -651,7 +785,7 @@ private fun FogWorldMap(
                         .build()
                     map.addOnCameraMoveStartedListener { reason ->
                         if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
-                            onUserMovedMap()
+                            latestUserMovedMap()
                         }
                     }
                     map.addOnCameraMoveListener { cameraTick += 1 }

@@ -85,6 +85,30 @@ square-meter summary counts only unique core reveal cells first seen today and
 ignores road/path glow cells. It does not use hectares and does not schedule
 separate background marketing notifications.
 
+Version 0.7.0 adds 83 rotating notification lines. A callback on the existing
+service worker updates the same notification ID at 90-minute wall-clock slots.
+It does not wake the device. Notification updates are silent and alert only once;
+the channel has low importance with no default sound or vibration. User channel
+settings are retained. Service shutdown removes the callback and prevents a
+concurrent refresh from posting after the foreground notification is removed.
+
+## Discovery replay
+
+`WorldGrowth` takes a local snapshot of first-seen timestamps and reconstructs
+the cleared world up to a chosen time. Week, month, and year are calendar periods
+in the device time zone; all-time starts just before the first dated discovery.
+Undated rows remain baseline, future-dated rows are excluded, and quiet periods
+have no playback. Precise reveal cells are used throughout a snapshot when
+available; legacy-only worlds use visited cells. The representation never changes
+mid-replay. Bounds use the shortest longitude arc, including across the date line.
+
+Replay uses a 24-second timeline with pause, seek, and restart controls. Playback
+pauses when the activity is not resumed. The live position, goal, and visit tint
+are hidden during replay. Road-glow recording from the visible map is suspended,
+but the foreground location service continues recording. The snapshot is read
+only and uses existing storage without migration. Historical visit intensity and
+exact routes cannot be reconstructed from these records.
+
 Road and path reveal is not generated from saved cells when the map opens. Opening
 or resuming the map seeds the road tracker with the current position. Nearby
 rendered streets and paths are added only after fresh movement on the open map.

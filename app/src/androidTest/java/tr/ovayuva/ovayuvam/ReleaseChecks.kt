@@ -23,10 +23,22 @@ import java.util.concurrent.TimeUnit
 /** Uses a separate verification package and isolated database, never the user's world. */
 class ReleaseChecks : Instrumentation() {
     private var visual = false
-    override fun onCreate(arguments: Bundle?) { visual = arguments?.getString("visual") == "true"; super.onCreate(arguments); start() }
+    private var notifications = false
+    override fun onCreate(arguments: Bundle?) {
+        visual = arguments?.getString("visual") == "true"
+        notifications = arguments?.getString("notifications") == "true"
+        super.onCreate(arguments)
+        start()
+    }
     override fun onStart() {
         val result = Bundle()
         try {
+            if (notifications) {
+                checkQuietNotifications(targetContext)
+                result.putString("stream", "PASS: silent ongoing notification replacement\n")
+                finish(-1, result)
+                return
+            }
             if (visual) {
                 captureHeat()
                 result.putString("stream", "PASS: heat screenshots\n")

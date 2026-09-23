@@ -2,10 +2,7 @@ package tr.ovayuva.ovayuvam.location
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -18,13 +15,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.HandlerThread
+import android.os.Handler
 import android.os.SystemClock
 import android.provider.Settings
-import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import tr.ovayuva.ovayuvam.MainActivity
-import tr.ovayuva.ovayuvam.R
 import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.domain.GeoPosition
@@ -42,7 +37,17 @@ class LocationTrailService : Service() {
     private var lastAcceptedLocation: Location? = null
     private var lastNotificationText: String? = null
     private var lastNotificationRefreshMs: Long = 0L
+    private val notificationLock = Any()
     private val worker = HandlerThread("world-trail")
+    private lateinit var workerHandler: Handler
+    @Volatile private var running = false
+    private val notificationTick = object : Runnable {
+        override fun run() {
+            if (!running) return
+            refreshNotification(force = true)
+            if (running) workerHandler.postDelayed(this, TrackingNotificationText.nextRotationDelay(System.currentTimeMillis()))
+        }
+    }
     private lateinit var visitPreferences: VisitPreferences
     private var bootId: Int = -1
 
@@ -55,7 +60,8 @@ class LocationTrailService : Service() {
         visitPreferences = VisitPreferences(this)
         bootId = Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1)
         worker.start()
-        ensureChannel()
+        workerHandler = Handler(worker.looper)
+        TrackingNotification.ensureChannel(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -64,15 +70,21 @@ class LocationTrailService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        running = true
         startAsForegroundLocationService()
         startTracking()
+        workerHandler.removeCallbacks(notificationTick)
+        workerHandler.postDelayed(notificationTick, TrackingNotificationText.nextRotationDelay(System.currentTimeMillis()))
         return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        running = false
+        workerHandler.removeCallbacksAndMessages(null)
         stopTracking()
+        workerHandler.post { repository.close() }
         worker.quitSafely()
         super.onDestroy()
     }
@@ -128,10 +140,11 @@ class LocationTrailService : Service() {
         listener = null
         lastAcceptedLocation = null
         trackingState.setTracking(false)
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        synchronized(notificationLock) { stopForeground(STOP_FOREGROUND_REMOVE) }
     }
 
     private fun acceptLocation(location: Location) {
+        if (!running) return
         val now = System.currentTimeMillis()
         if (!location.isUsable(now)) {
             repository.interruptPresence()
@@ -248,21 +261,15 @@ class LocationTrailService : Service() {
     private fun providerEnabled(provider: String): Boolean =
         runCatching { locationManager.isProviderEnabled(provider) }.getOrDefault(false)
 
-    private fun ensureChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.tracking_channel_name),
-            NotificationManager.IMPORTANCE_LOW,
-        )
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-    }
-
     private fun startAsForegroundLocationService() {
+        val now = System.currentTimeMillis()
+        val text = notificationText(now)
+        lastNotificationText = text
+        lastNotificationRefreshMs = now
         ServiceCompat.startForeground(
             this,
-            NOTIFICATION_ID,
-            notification(notificationText(System.currentTimeMillis())),
+            TrackingNotification.Id,
+            TrackingNotification.create(this, text),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             } else {
@@ -271,13 +278,15 @@ class LocationTrailService : Service() {
         )
     }
 
-    private fun refreshNotification(nowMs: Long = System.currentTimeMillis()) {
-        if (nowMs - lastNotificationRefreshMs < NotificationMinRefreshMs) return
-        val text = notificationText(nowMs)
-        if (text == lastNotificationText && lastNotificationRefreshMs > 0L) return
-        lastNotificationText = text
+    private fun refreshNotification(nowMs: Long = System.currentTimeMillis(), force: Boolean = false) {
+        if (!running || (!force && nowMs - lastNotificationRefreshMs in 0 until NotificationMinRefreshMs)) return
         lastNotificationRefreshMs = nowMs
-        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification(text))
+        val text = notificationText(nowMs)
+        synchronized(notificationLock) {
+            if (text == lastNotificationText || !running) return
+            lastNotificationText = text
+            getSystemService(NotificationManager::class.java).notify(TrackingNotification.Id, TrackingNotification.create(this, text))
+        }
     }
 
     private fun notificationText(nowMs: Long): String {
@@ -299,26 +308,7 @@ class LocationTrailService : Service() {
         )
     }
 
-    private fun notification(text: String): Notification {
-        val openIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_map)
-            .setContentTitle(getString(R.string.tracking_notification_title))
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setContentIntent(openIntent)
-            .setOngoing(true)
-            .build()
-    }
-
     companion object {
-        private const val CHANNEL_ID = "location-tracking"
-        private const val NOTIFICATION_ID = 1001
         private const val MaxAcceptedAccuracyMeters = 75f
         private const val DefaultAccuracyMeters = 50f
         private const val MaxAcceptedAgeMs = 30_000L
