@@ -24,15 +24,31 @@ import java.util.concurrent.TimeUnit
 class ReleaseChecks : Instrumentation() {
     private var visual = false
     private var notifications = false
+    private var performance: String? = null
+    private var raster = false
     override fun onCreate(arguments: Bundle?) {
         visual = arguments?.getString("visual") == "true"
         notifications = arguments?.getString("notifications") == "true"
+        performance = arguments?.getString("performance")
+        raster = arguments?.getString("raster") == "true"
         super.onCreate(arguments)
         start()
     }
     override fun onStart() {
         val result = Bundle()
         try {
+            performance?.let {
+                checkFogPerformance(it)
+                result.putString("stream", "PASS: fog camera benchmark $it\n")
+                finish(-1,result)
+                return
+            }
+            if (raster) {
+                checkFogRaster()
+                result.putString("stream", "PASS: fog raster pixels, heat, legacy, date line, cancellation\n")
+                finish(-1,result)
+                return
+            }
             if (notifications) {
                 checkQuietNotifications(targetContext)
                 result.putString("stream", "PASS: silent ongoing notification replacement\n")

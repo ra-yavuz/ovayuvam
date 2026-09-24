@@ -50,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -61,6 +62,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
@@ -82,6 +85,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -108,7 +112,10 @@ import tr.ovayuva.ovayuvam.location.TrackingState
 import tr.ovayuva.ovayuvam.location.VisitPreferences
 import tr.ovayuva.ovayuvam.location.VisitCount
 import tr.ovayuva.ovayuvam.map.BasemapStyle
-import tr.ovayuva.ovayuvam.map.VisitHeat
+import tr.ovayuva.ovayuvam.map.FogRaster
+import tr.ovayuva.ovayuvam.map.FogViewport
+import tr.ovayuva.ovayuvam.map.MercatorPoint
+import tr.ovayuva.ovayuvam.map.RevealBrush
 import tr.ovayuva.ovayuvam.map.WorldGrowth
 import tr.ovayuva.ovayuvam.map.GrowthPeriod
 import tr.ovayuva.ovayuvam.map.GrowthBounds
@@ -149,8 +156,6 @@ class MainActivity : ComponentActivity() {
 
 private const val InitialZoom = 15.6
 private const val CoreRevealRadiusMeters = 20.0
-private const val RoadRevealRadiusMeters = 11.0
-private const val LegacyRevealRadiusMeters = 20.0
 private const val RoadRevealReachMeters = 32.0
 private const val RoadRevealMinMovementMeters = 6.0
 private const val RoadQueryRadiusMeters = 38.0
@@ -323,15 +328,17 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         }
     }
 
-    LaunchedEffect(window, replayOpen) {
+    LaunchedEffect(window, replayOpen, lifecycle) {
         if (replayOpen) return@LaunchedEffect
-        while (true) {
-            val data = withContext(Dispatchers.IO) { repository.mapData(window) }
-            cells = data.cells
-            revealCells = data.reveal
-            visits = data.visits
-            visitsStarted = withContext(Dispatchers.IO) { repository.visitsStartedMs() }
-            delay(2_000L)
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                val data = withContext(Dispatchers.IO) { repository.mapData(window) }
+                cells = data.cells
+                revealCells = data.reveal
+                visits = data.visits
+                visitsStarted = withContext(Dispatchers.IO) { repository.visitsStartedMs() }
+                delay(2_000L)
+            }
         }
     }
 
@@ -893,20 +900,42 @@ private fun FogRevealOverlay(
     cameraTick: Int,
     modifier: Modifier = Modifier,
 ) {
-    val counts = remember(visits) { visits.associate { WorldCell(it.x, it.y) to it.visits } }
-    Canvas(modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
-        cameraTick
-        if (map != null && counts.isNotEmpty()) {
-            val zoom = map.cameraPosition.zoom
-            if (VisitHeat.opacity(zoom, 1) > 0) {
-                revealMarks(map, cells, revealCells, currentCell, currentPosition).forEach { mark ->
-                    if (mark.kind == RevealCell.Kind.Core) {
-                        val position = map.projection.fromScreenLocation(android.graphics.PointF(mark.point.x, mark.point.y))
-                        val count = counts[WorldCell.fromLocation(position.latitude, position.longitude)] ?: 0
-                        if (count > 0) drawCircle(Color(VisitHeat.color(count)).copy(alpha = VisitHeat.opacity(zoom, count)),
-                            radius = mark.radiusPx * 0.56f, center = mark.point, blendMode = BlendMode.Src)
-                    }
+    var frame by remember { mutableStateOf<FogRaster?>(null) }
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val latestTick by rememberUpdatedState(cameraTick)
+    val heatPaint = remember { android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG) }
+    val maskPaint = remember {
+        android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
+            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT)
+        }
+    }
+    LaunchedEffect(map, cells, revealCells, visits, viewportSize, lifecycle) {
+        if (map == null || viewportSize.width == 0 || viewportSize.height == 0) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            var renderedView: FogViewport? = null
+            while (true) {
+                val tick = latestTick
+                val view = map.fogViewport(viewportSize.width,viewportSize.height)
+                if (renderedView?.covers(view) != true) {
+                    val rendered = withContext(Dispatchers.Default) { FogRaster.render(view,cells,revealCells,visits) }
+                    frame = rendered
+                    renderedView = rendered.viewport
                 }
+                snapshotFlow { latestTick }.first { it != tick }
+                // Keep gestures responsive while a worker refreshes the padded world-anchored image.
+                delay(120)
+            }
+        }
+    }
+    Canvas(modifier.onSizeChanged { viewportSize = it }) {
+        cameraTick
+        val cached = frame
+        if (map != null && cached != null && visits.isNotEmpty()) {
+            val zoom = map.cameraPosition.zoom
+            heatPaint.alpha = (((14.5-zoom)/2.5).coerceIn(0.0,1.0)*255).roundToInt()
+            if (heatPaint.alpha > 0) cached.heat?.let {
+                drawFogImage(map,cached.viewport,it,heatPaint)
             }
         }
     }
@@ -918,108 +947,47 @@ private fun FogRevealOverlay(
         cameraTick
         drawRect(Fog)
         if (map != null) {
-            revealMarks(map, cells, revealCells, currentCell, currentPosition).forEach(::drawRevealBrush)
+            frame?.let { drawFogImage(map,it.viewport,it.reveal,maskPaint) }
+            val position = currentPosition ?: currentCell?.centerPosition()
+            position?.let {
+                val point = map.projection.toScreenLocation(it.toLatLng())
+                drawRevealBrush(RevealMark(currentCell?.x ?: 0,currentCell?.y ?: 0,
+                    Offset(point.x,point.y),radiusPixels(map,it,CoreRevealRadiusMeters),8,RevealCell.Kind.Core))
+            }
             currentPosition?.let { drawCurrentDot(map, it) }
             goal?.let { drawGoal(map, it) }
         }
     }
 }
 
-private fun DrawScope.revealMarks(
-    map: MapLibreMap,
-    cells: List<VisitedCell>,
-    revealCells: List<RevealCell>,
-    currentCell: WorldCell?,
-    currentPosition: GeoPosition?,
-): List<RevealMark> {
-    val canvasWidth = size.width
-    val canvasHeight = size.height
-    val visible = buildList {
-        revealCells.forEach { cell ->
-            val position = WorldCell(cell.x, cell.y).centerPosition(WorldCell.RevealCellSizeMeters)
-            val point = map.projection.toScreenLocation(position.toLatLng())
-            val center = Offset(point.x, point.y)
-            val meters = if (cell.kind == RevealCell.Kind.Road) RoadRevealRadiusMeters else CoreRevealRadiusMeters
-            val radius = radiusPixels(map, position, meters)
-            if (isVisible(center, radius, canvasWidth, canvasHeight)) {
-                add(RevealMark(cell.x, cell.y, center, radius, cell.samples, cell.kind))
-            }
-        }
-        if (revealCells.isEmpty()) {
-            cells.forEach { cell ->
-                val position = WorldCell(cell.x, cell.y).centerPosition()
-                val point = map.projection.toScreenLocation(position.toLatLng())
-                val center = Offset(point.x, point.y)
-                val radius = radiusPixels(map, position, LegacyRevealRadiusMeters)
-                if (isVisible(center, radius, canvasWidth, canvasHeight)) {
-                    add(RevealMark(cell.x, cell.y, center, radius, cell.samples, RevealCell.Kind.Core))
-                }
-            }
-        }
-        currentPosition?.let { position ->
-            val point = map.projection.toScreenLocation(position.toLatLng())
-            val center = Offset(point.x, point.y)
-            val radius = radiusPixels(map, position, CoreRevealRadiusMeters)
-            if (isVisible(center, radius, canvasWidth, canvasHeight)) {
-                add(RevealMark(0, 0, center, radius, 8, RevealCell.Kind.Core))
-            }
-        } ?: currentCell?.let { cell ->
-            val position = cell.centerPosition()
-            val point = map.projection.toScreenLocation(position.toLatLng())
-            val center = Offset(point.x, point.y)
-            val radius = radiusPixels(map, position, LegacyRevealRadiusMeters)
-            if (isVisible(center, radius, canvasWidth, canvasHeight)) {
-                add(RevealMark(cell.x, cell.y, center, radius, 3, RevealCell.Kind.Core))
-            }
-        }
+private fun MapLibreMap.fogViewport(width: Int, height: Int): FogViewport {
+    val middle = projection.fromScreenLocation(android.graphics.PointF(width/2f,height/2f))
+    val edge = projection.fromScreenLocation(android.graphics.PointF(width/2f+100f,height/2f))
+    val center = MercatorPoint.from(GeoPosition(middle.latitude,middle.longitude))
+    val east = MercatorPoint.from(GeoPosition(edge.latitude,edge.longitude))
+    return FogViewport(center,abs(MercatorPoint.nearestDelta(east.x-center.x))/100.0,width,height)
+}
+
+private fun DrawScope.drawFogImage(map: MapLibreMap, cached: FogViewport, bitmap: android.graphics.Bitmap,
+                                  paint: android.graphics.Paint) {
+    val current = map.fogViewport(size.width.roundToInt(),size.height.roundToInt())
+    val scale = cached.metersPerPixel/current.metersPerPixel
+    // Do not magnify a distant overview pixel into a large, falsely revealed area.
+    if (scale > 4.0) return
+    val width = cached.width*scale
+    val height = cached.height*scale
+    val left = current.screenX(cached.center.x)-width/2
+    val top = current.screenY(cached.center.y)-height/2
+    drawIntoCanvas { canvas ->
+        canvas.nativeCanvas.drawBitmap(bitmap,null,RectF(left.toFloat(),top.toFloat(),
+            (left+width).toFloat(),(top+height).toFloat()),paint)
     }
-    return visible
 }
 
 private fun DrawScope.drawRevealBrush(mark: RevealMark) {
-    val x = mark.seedX
-    val y = mark.seedY
-    val radius = mark.radiusPx
-    val road = mark.kind == RevealCell.Kind.Road
-    val strength = if (road) {
-        (0.48f + mark.samples.coerceAtMost(6) * 0.035f).coerceAtMost(0.72f)
-    } else {
-        (0.7f + mark.samples.coerceAtMost(8) * 0.035f).coerceAtMost(0.95f)
+    RevealBrush.circles(mark.seedX,mark.seedY,mark.samples,mark.kind == RevealCell.Kind.Road,mark.radiusPx) { dx,dy,radius,alpha ->
+        drawCircle(Color.Black.copy(alpha = alpha),radius,mark.point+Offset(dx,dy),blendMode = BlendMode.DstOut)
     }
-    val offsets = listOf(
-        Offset(-0.32f, -0.08f),
-        Offset(0.28f, -0.18f),
-        Offset(-0.18f, 0.28f),
-        Offset(0.34f, 0.18f),
-        Offset(0.04f, -0.36f),
-    )
-    drawCircle(
-        color = Color.Black.copy(alpha = if (road) 0.18f else 0.3f),
-        radius = radius * if (road) 1.05f else 1.18f,
-        center = mark.point,
-        blendMode = BlendMode.DstOut,
-    )
-    offsets.forEachIndexed { index, offset ->
-        val roughRadius = radius * (if (road) 0.36f else 0.58f + noise(x + index * 11, y - index * 7) * 0.28f)
-        drawCircle(
-            color = Color.Black.copy(alpha = if (road) 0.14f else 0.34f),
-            radius = roughRadius,
-            center = mark.point + Offset(offset.x * radius, offset.y * radius),
-            blendMode = BlendMode.DstOut,
-        )
-    }
-    drawCircle(
-        color = Color.Black.copy(alpha = strength),
-        radius = radius * if (road) 0.82f else 0.86f,
-        center = mark.point,
-        blendMode = BlendMode.DstOut,
-    )
-    drawCircle(
-        color = Color.Black,
-        radius = radius * if (road) 0.28f else 0.56f,
-        center = mark.point,
-        blendMode = BlendMode.Clear,
-    )
 }
 
 private fun DrawScope.drawCurrentDot(map: MapLibreMap, position: GeoPosition) {
@@ -1082,18 +1050,12 @@ private fun DrawScope.drawGoalArrow(offscreenPoint: Offset) {
     drawPath(path, Color(0xFF422418), style = Stroke(2.dp.toPx()))
 }
 
-private fun isVisible(center: Offset, radius: Float, canvasWidth: Float, canvasHeight: Float): Boolean =
-    center.x + radius >= 0f &&
-        center.y + radius >= 0f &&
-        center.x - radius <= canvasWidth &&
-        center.y - radius <= canvasHeight
-
 private fun radiusPixels(map: MapLibreMap, position: GeoPosition, meters: Double): Float {
     val center = map.projection.toScreenLocation(position.toLatLng())
     val edge = map.projection.toScreenLocation(position.offsetEast(meters).toLatLng())
     return hypot((edge.x - center.x).toDouble(), (edge.y - center.y).toDouble())
         .toFloat()
-        .coerceAtLeast(1f)
+        .coerceAtLeast(0f)
 }
 
 private fun MapLibreMap.roadRevealCellsNear(position: GeoPosition): Set<WorldCell> {
@@ -1184,11 +1146,6 @@ private fun GeoPosition.toLatLng(): LatLng = LatLng(latitude, longitude)
 private fun GeoPosition.offsetEast(meters: Double): GeoPosition {
     val metersPerDegree = max(1.0, (PI / 180.0) * EarthRadiusMeters * cos(latitude.toRadians()))
     return copy(longitude = (longitude + meters / metersPerDegree).coerceIn(-180.0, 180.0))
-}
-
-private fun noise(x: Int, y: Int): Float {
-    val mixed = (x * 73856093) xor (y * 19349663)
-    return (mixed and 0xFFFF) / 65535f
 }
 
 private fun Double.toRadians(): Double = this * PI / 180.0

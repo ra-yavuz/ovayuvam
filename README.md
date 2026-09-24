@@ -13,7 +13,7 @@ notification. Hidden tracking is not a goal.
 
 ## Status
 
-This is a local-first Android app distributed to testers outside Google Play. It
+This is a local-first Android app available to invited Google Play internal testers. It
 contains:
 
 - A standalone Android project under `app/`.
@@ -24,6 +24,7 @@ contains:
 - Small road/path reveal extensions after fresh movement on the open map, like fog being brushed along nearby streets.
 - Smoother trail recording that filters poor fixes and fills gaps between good GPS points.
 - Strict fog-of-war reveal at every zoom level, without country-scale aggregation.
+- Cached fog rendering that keeps large explored worlds responsive while zooming.
 - Translucent visit colors when zoomed out, fading away at street level.
 - Local return detection that groups movement within a stay and filters GPS drift.
 - An adjustable stay radius for larger homes or properties.
@@ -39,10 +40,10 @@ contains:
 
 ## Download
 
-Version `0.7.0`, Android package `tr.ovayuva.ovayuvam`.
+Version `0.7.1`, Android package `tr.ovayuva.ovayuvam`.
 
-Visit [the product website](https://ovayuvam.ovayuva.tr/) for testing information.
-Tester download links are shared separately. This is not a Google Play release.
+Visit [the product website](https://ovayuvam.ovayuva.tr/) to request a tester invitation.
+Downloads are through Google Play internal testing. This is not a public production release.
 
 Install the update over the existing app to retain your revealed world, goal,
 and settings. Do not uninstall first. Visit counts have been recorded since
@@ -71,10 +72,10 @@ Encrypted backups include revealed cells, visit counts, and the optional goal
 pin. Older backups remain readable. Keep your passphrase; ovayuvam cannot recover
 it. This feature does not add accounts, automatic cloud sync, or friend sharing.
 
-This is a sideloaded APK outside Google Play. Android may ask you to allow
-installation from your browser or file manager. If a browser reaches 100 percent
-and appears stuck, open the Downloads or Files app and install the completed APK
-from there.
+Version 0.7.1 moves fog rendering off the UI thread and reuses a map-aligned image
+while you zoom or pan. The brush radius stays tied to real distance. Rendering
+pauses when the map is off screen; location tracking continues as before.
+See the [release checks and limits](docs/RELEASE-0.7.1.md).
 
 ## What is deliberately out of scope for version 1
 
@@ -85,7 +86,7 @@ from there.
 - No shared world upload.
 - No ovayuva map backend. The basemap is loaded from OpenFreeMap/OpenStreetMap.
 - No automatic Google Drive upload.
-- No Google Play developer-account submission or review approval yet.
+- No Google Play production release or review approval yet.
 
 Future versions can add optional encrypted backup to the user's Google Drive and
 optional friend groups. Those features must be separate opt-ins, not default data
