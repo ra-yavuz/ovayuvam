@@ -1,1 +1,1 @@
-Improves map responsiveness when zooming and panning across explored areas. Keeps the reveal radius tied to real distance and pauses map rendering while the app is in the background. Your revealed world, visit counts, goal and settings are preserved.
+Reworks fog rendering to reuse map tiles while you pan and zoom, including on higher-resolution phones. New exploration updates nearby tiles, and wider views reuse smaller overview images. Your revealed world, visit counts, goal and settings are preserved.

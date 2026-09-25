@@ -40,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +49,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
@@ -112,7 +114,9 @@ import tr.ovayuva.ovayuvam.location.TrackingState
 import tr.ovayuva.ovayuvam.location.VisitPreferences
 import tr.ovayuva.ovayuvam.location.VisitCount
 import tr.ovayuva.ovayuvam.map.BasemapStyle
-import tr.ovayuva.ovayuvam.map.FogRaster
+import tr.ovayuva.ovayuvam.map.FogTileCache
+import tr.ovayuva.ovayuvam.map.FogTileFrame
+import tr.ovayuva.ovayuvam.map.FogTiles
 import tr.ovayuva.ovayuvam.map.FogViewport
 import tr.ovayuva.ovayuvam.map.MercatorPoint
 import tr.ovayuva.ovayuvam.map.RevealBrush
@@ -122,6 +126,7 @@ import tr.ovayuva.ovayuvam.map.GrowthBounds
 import tr.ovayuva.ovayuvam.ui.GrowthControls
 import tr.ovayuva.ovayuvam.storage.VisitRepository
 import tr.ovayuva.ovayuvam.storage.MapWindow
+import tr.ovayuva.ovayuvam.storage.WorldMapData
 import tr.ovayuva.ovayuvam.ui.theme.Fog
 import tr.ovayuva.ovayuvam.ui.theme.Forest
 import tr.ovayuva.ovayuvam.ui.theme.Ink
@@ -182,11 +187,13 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     val visitPreferences = remember { VisitPreferences(context) }
     var showHeat by remember { mutableStateOf(visitPreferences.showHeat) }
     var stayRadius by remember { mutableIntStateOf(visitPreferences.stayRadius) }
-    var cells by remember { mutableStateOf(emptyList<VisitedCell>()) }
-    var revealCells by remember { mutableStateOf(emptyList<RevealCell>()) }
-    var visits by remember { mutableStateOf(emptyList<VisitCount>()) }
+    var worldData by remember {
+        mutableStateOf(WorldMapData(emptyList(), emptyList(), emptyList()), referentialEqualityPolicy())
+    }
+    val cells = worldData.cells
+    val revealCells = worldData.reveal
+    val visits = worldData.visits
     var visitsStarted by remember { mutableStateOf<Long?>(null) }
-    var window by remember { mutableStateOf(MapWindow(-85.0, -180.0, 85.0, 180.0, true)) }
     var currentCell by remember { mutableStateOf(trackingState.currentCell()) }
     var currentPosition by remember { mutableStateOf(trackingState.currentPosition()) }
     var goal by remember { mutableStateOf(goalState.goal()) }
@@ -328,14 +335,17 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         }
     }
 
-    LaunchedEffect(window, replayOpen, lifecycle) {
+    LaunchedEffect(replayOpen, lifecycle) {
         if (replayOpen) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                val data = withContext(Dispatchers.IO) { repository.mapData(window) }
-                cells = data.cells
-                revealCells = data.reveal
-                visits = data.visits
+                val previous = worldData
+                // Tiles must have complete geographic contents, not a changing viewport subset.
+                val data = withContext(Dispatchers.IO) {
+                    repository.mapData(MapWindow(-85.05112878, -180.0, 85.05112878, 180.0, true))
+                        .takeUnless { it == previous }
+                }
+                if (data != null) worldData = data
                 visitsStarted = withContext(Dispatchers.IO) { repository.visitsStartedMs() }
                 delay(2_000L)
             }
@@ -388,7 +398,6 @@ private fun OvayuvamScreen(repository: VisitRepository) {
             replayOpen = replayOpen,
             replayBounds = growth?.bounds,
             replayPanelHeightPx = replayPanelHeightPx,
-            onWindowChanged = { window = it },
             cells = if (growth != null && replayOpen) replayFrame?.cells.orEmpty() else cells,
             revealCells = if (growth != null && replayOpen) replayFrame?.reveal.orEmpty() else revealCells,
             currentCell = if (replayOpen) null else currentCell,
@@ -678,7 +687,6 @@ private fun FogWorldMap(
     replayOpen: Boolean,
     replayBounds: GrowthBounds?,
     replayPanelHeightPx: Int,
-    onWindowChanged: (MapWindow) -> Unit,
     cells: List<VisitedCell>,
     revealCells: List<RevealCell>,
     currentCell: WorldCell?,
@@ -697,13 +705,12 @@ private fun FogWorldMap(
         currentPosition ?: currentCell?.centerPosition() ?: fallbackPosition(cells)
     }
     var activeMap by remember { mutableStateOf<MapLibreMap?>(null) }
-    var cameraTick by remember { mutableIntStateOf(0) }
+    val cameraTick = remember { mutableIntStateOf(0) }
     var mapResumed by remember {
         mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
     }
     var lastRoadRevealPosition by remember { mutableStateOf<GeoPosition?>(null) }
     val latestGoalSelected by rememberUpdatedState(onGoalSelected)
-    val latestWindowChanged by rememberUpdatedState(onWindowChanged)
     val latestUserMovedMap by rememberUpdatedState(onUserMovedMap)
     var beforeReplayCamera by remember { mutableStateOf<CameraPosition?>(null) }
     val density = LocalDensity.current.density
@@ -795,20 +802,16 @@ private fun FogWorldMap(
                             latestUserMovedMap()
                         }
                     }
-                    map.addOnCameraMoveListener { cameraTick += 1 }
+                    map.addOnCameraMoveListener { cameraTick.intValue += 1 }
                     map.addOnCameraIdleListener {
-                        cameraTick += 1
-                        val bounds = map.projection.visibleRegion.latLngBounds
-                        latestWindowChanged(MapWindow(bounds.latitudeSouth, bounds.longitudeWest,
-                            bounds.latitudeNorth, bounds.longitudeEast,
-                            map.cameraPosition.zoom < 2.0 || bounds.longitudeEast - bounds.longitudeWest >= 359.0))
+                        cameraTick.intValue += 1
                     }
                     map.addOnMapLongClickListener { latLng ->
                         latestGoalSelected(GeoPosition(latitude = latLng.latitude, longitude = latLng.longitude))
                         true
                     }
                     map.setStyle(Style.Builder().fromJson(BasemapStyle.json())) {
-                        cameraTick += 1
+                        cameraTick.intValue += 1
                     }
                     activeMap = map
                 }
@@ -897,13 +900,13 @@ private fun FogRevealOverlay(
     currentPosition: GeoPosition?,
     goal: GoalPin?,
     map: MapLibreMap?,
-    cameraTick: Int,
+    cameraTick: State<Int>,
     modifier: Modifier = Modifier,
 ) {
-    var frame by remember { mutableStateOf<FogRaster?>(null) }
+    val cache = remember { FogTileCache() }
+    var frame by remember { mutableStateOf<FogTileFrame?>(null) }
     var viewportSize by remember { mutableStateOf(IntSize.Zero) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val latestTick by rememberUpdatedState(cameraTick)
     val heatPaint = remember { android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG) }
     val maskPaint = remember {
         android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
@@ -913,30 +916,23 @@ private fun FogRevealOverlay(
     LaunchedEffect(map, cells, revealCells, visits, viewportSize, lifecycle) {
         if (map == null || viewportSize.width == 0 || viewportSize.height == 0) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            var renderedView: FogViewport? = null
+            withContext(Dispatchers.Default) { cache.update(cells, revealCells, visits) }
             while (true) {
-                val tick = latestTick
-                val view = map.fogViewport(viewportSize.width,viewportSize.height)
-                if (renderedView?.covers(view) != true) {
-                    val rendered = withContext(Dispatchers.Default) { FogRaster.render(view,cells,revealCells,visits) }
-                    frame = rendered
-                    renderedView = rendered.viewport
-                }
-                snapshotFlow { latestTick }.first { it != tick }
-                // Keep gestures responsive while a worker refreshes the padded world-anchored image.
-                delay(120)
+                val tick = cameraTick.value
+                val view = map.fogViewport(viewportSize.width, viewportSize.height)
+                frame = withContext(Dispatchers.Default) { cache.frame(view) }
+                snapshotFlow { cameraTick.value }.first { it != tick }
+                delay(80)
             }
         }
     }
     Canvas(modifier.onSizeChanged { viewportSize = it }) {
-        cameraTick
+        cameraTick.value
         val cached = frame
         if (map != null && cached != null && visits.isNotEmpty()) {
             val zoom = map.cameraPosition.zoom
             heatPaint.alpha = (((14.5-zoom)/2.5).coerceIn(0.0,1.0)*255).roundToInt()
-            if (heatPaint.alpha > 0) cached.heat?.let {
-                drawFogImage(map,cached.viewport,it,heatPaint)
-            }
+            if (heatPaint.alpha > 0) drawFogTiles(map, cached, heatPaint, heat = true)
         }
     }
     Canvas(
@@ -944,10 +940,10 @@ private fun FogRevealOverlay(
             compositingStrategy = CompositingStrategy.Offscreen
         },
     ) {
-        cameraTick
+        cameraTick.value
         drawRect(Fog)
         if (map != null) {
-            frame?.let { drawFogImage(map,it.viewport,it.reveal,maskPaint) }
+            frame?.let { drawFogTiles(map, it, maskPaint, heat = false) }
             val position = currentPosition ?: currentCell?.centerPosition()
             position?.let {
                 val point = map.projection.toScreenLocation(it.toLatLng())
@@ -968,19 +964,27 @@ private fun MapLibreMap.fogViewport(width: Int, height: Int): FogViewport {
     return FogViewport(center,abs(MercatorPoint.nearestDelta(east.x-center.x))/100.0,width,height)
 }
 
-private fun DrawScope.drawFogImage(map: MapLibreMap, cached: FogViewport, bitmap: android.graphics.Bitmap,
-                                  paint: android.graphics.Paint) {
-    val current = map.fogViewport(size.width.roundToInt(),size.height.roundToInt())
-    val scale = cached.metersPerPixel/current.metersPerPixel
-    // Do not magnify a distant overview pixel into a large, falsely revealed area.
-    if (scale > 4.0) return
-    val width = cached.width*scale
-    val height = cached.height*scale
-    val left = current.screenX(cached.center.x)-width/2
-    val top = current.screenY(cached.center.y)-height/2
+private fun DrawScope.drawFogTiles(map: MapLibreMap, frame: FogTileFrame,
+                                  paint: android.graphics.Paint, heat: Boolean) {
+    val view = map.fogViewport(size.width.roundToInt(), size.height.roundToInt())
+    // A coarse overview must never grow into a street-sized false reveal.
+    if (FogTiles.level(view) > frame.level + 1) return
     drawIntoCanvas { canvas ->
-        canvas.nativeCanvas.drawBitmap(bitmap,null,RectF(left.toFloat(),top.toFloat(),
-            (left+width).toFloat(),(top+height).toFloat()),paint)
+        for ((key, tile) in frame.images) {
+            val bitmap = (if (heat) tile.heat else tile.reveal) ?: continue
+            val span = key.span
+            val left = view.screenX(key.left + span / 2) - span / view.metersPerPixel / 2
+            val top = view.screenY(key.top)
+            val pixels = span / view.metersPerPixel
+            val worldPixels = MercatorPoint.WorldWidth / view.metersPerPixel
+            val firstCopy = ceil((-left - pixels) / worldPixels).toInt()
+            val lastCopy = kotlin.math.floor((view.width - left) / worldPixels).toInt()
+            for (copy in firstCopy..lastCopy) {
+                val x = left + copy * worldPixels
+                canvas.nativeCanvas.drawBitmap(bitmap, null, RectF(x.toFloat(), top.toFloat(),
+                    (x + pixels).toFloat(), (top + pixels).toFloat()), paint)
+            }
+        }
     }
 }
 

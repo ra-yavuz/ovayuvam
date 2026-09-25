@@ -40,7 +40,7 @@ contains:
 
 ## Download
 
-Version `0.7.1`, Android package `tr.ovayuva.ovayuvam`.
+Version `0.7.2`, Android package `tr.ovayuva.ovayuvam`.
 
 Visit [the product website](https://ovayuvam.ovayuva.tr/) to request a tester invitation.
 Downloads are through Google Play internal testing. This is not a public production release.
@@ -72,10 +72,11 @@ Encrypted backups include revealed cells, visit counts, and the optional goal
 pin. Older backups remain readable. Keep your passphrase; ovayuvam cannot recover
 it. This feature does not add accounts, automatic cloud sync, or friend sharing.
 
-Version 0.7.1 moves fog rendering off the UI thread and reuses a map-aligned image
-while you zoom or pan. The brush radius stays tied to real distance. Rendering
-pauses when the map is off screen; location tracking continues as before.
-See the [release checks and limits](docs/RELEASE-0.7.1.md).
+Version 0.7.2 uses reusable geographic fog tiles and smaller overview images when
+you zoom out. New exploration updates nearby tiles. The brush radius stays tied
+to real distance. Rendering pauses when the map is off screen; location tracking
+continues as before. See the [release notes](docs/RELEASE-0.7.2.md) and
+[rendering design](docs/FOG-RENDERING.md).
 
 ## What is deliberately out of scope for version 1
 

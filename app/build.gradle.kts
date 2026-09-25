@@ -20,8 +20,8 @@ android {
         applicationId = "tr.ovayuva.ovayuvam"
         minSdk = 26
         targetSdk = 36
-        versionCode = 25
-        versionName = "0.7.1"
+        versionCode = 26
+        versionName = "0.7.2"
 
         testInstrumentationRunner = "tr.ovayuva.ovayuvam.ReleaseChecks"
     }
