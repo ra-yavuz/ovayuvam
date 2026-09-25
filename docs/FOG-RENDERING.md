@@ -48,6 +48,20 @@ replacing tile contents with a viewport subset whenever the map moves. Unchanged
 snapshot comparisons also run there. Reads and rendering pause below the
 STARTED lifecycle state; the location service is unaffected.
 
+## Replay Camera (0.7.3)
+
+Replay starts at the first dated discovery, retaining any older undated baseline.
+The camera fits only the discoveries visible at the selected time, not the final
+saved world. It eases outward as that footprint expands and back inward when
+seeking to an earlier date. Interior discoveries do not change its bounds.
+Week, month and year views include the world already revealed at their start.
+
+Chronological camera bounds are built once with the history snapshot on the
+I/O worker. Each frame retrieves its bounds by binary search. Longitudes use a
+continuous world copy across the date line. A 35-metre geographic margin keeps
+brush edges visible, while screen padding leaves room for the replay controls.
+This changes presentation only; it does not rewrite stored exploration.
+
 ## Tests
 
 `FogTilesTest` covers phone-sized views, stable geographic keys, contiguous tile
@@ -57,3 +71,9 @@ overview reuse, tile boundaries, legacy history, replay removal, eviction, and
 cancellation. `FogPerformanceChecks` exercises actual MapLibre camera animations
 with recorded frame intervals. Emulator results are not a guarantee of frame
 rates or battery use on physical phones.
+
+`WorldGrowthTest` covers chronological camera bounds, baseline periods, rewinds,
+interior discoveries, legacy history, date-line wrapping and ground-distance
+padding. `GrowthCameraChecks` drives the real replay slider on the emulator,
+measures widening and rewinding camera zoom, captures the views, and checks
+that saved reveals are unchanged.

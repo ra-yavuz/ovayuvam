@@ -11,6 +11,18 @@ import tr.ovayuva.ovayuvam.location.GoalPin
 import tr.ovayuva.ovayuvam.location.VisitCount
 
 class WorldBackupCodecTest {
+    @Test fun unicodePassphraseAndLargeLegacyWorldRoundTrip() {
+        val backup = WorldBackup(
+            visitedCells = (0 until 10000).map { VisitedCell(it,34,100L,200L,it+1) },
+            revealCells = listOf(RevealCell(13,35,RevealCell.Kind.Core,120L,220L,2)),
+            goal = null,
+        )
+        val passphrase = "\u015fifre-\u00fcber-1234"
+        val restored = WorldBackupCodec.decrypt(BackupFiles.read(
+            WorldBackupCodec.encrypt(backup,passphrase).inputStream()),passphrase)
+        assertEquals(backup,restored)
+    }
+
     @Test
     fun originalBackupPayloadKeepsWorldWithoutInventingVisits() {
         val backup = WorldBackupCodec.fromPlainJson("""{"format":"ovayuvam.world.v1","exportedMs":400,

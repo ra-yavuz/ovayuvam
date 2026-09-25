@@ -40,7 +40,7 @@ contains:
 
 ## Download
 
-Version `0.7.2`, Android package `tr.ovayuva.ovayuvam`.
+Version `0.7.3`, Android package `tr.ovayuva.ovayuvam`.
 
 Visit [the product website](https://ovayuvam.ovayuva.tr/) to request a tester invitation.
 Downloads are through Google Play internal testing. This is not a public production release.
@@ -52,7 +52,8 @@ tell us how many independent visits took place.
 
 Open the info sheet and choose **Watch your world grow** to replay your saved
 discoveries. Pause, seek to a date, or choose a week, month, year, or all-time
-view. Earlier discoveries remain visible at the start of a shorter period.
+view. The camera starts close to the first discoveries and widens as the revealed
+world grows. Earlier discoveries remain visible at the start of a shorter period.
 Replay does not change saved history or stop tracking. It reconstructs first
 discoveries, not an exact route or past visit colors.
 
@@ -70,12 +71,14 @@ and returning. GPS gaps and uncertain fixes may cause visits to be undercounted.
 
 Encrypted backups include revealed cells, visit counts, and the optional goal
 pin. Older backups remain readable. Keep your passphrase; ovayuvam cannot recover
-it. This feature does not add accounts, automatic cloud sync, or friend sharing.
+it. Select a file first, then enter its passphrase. Import and export show progress
+and a clear result. Imports merge with your existing world. This feature does not
+add accounts, automatic cloud sync, or friend sharing.
 
 Version 0.7.2 uses reusable geographic fog tiles and smaller overview images when
 you zoom out. New exploration updates nearby tiles. The brush radius stays tied
 to real distance. Rendering pauses when the map is off screen; location tracking
-continues as before. See the [release notes](docs/RELEASE-0.7.2.md) and
+continues as before. See the [release notes](docs/RELEASE-0.7.3.md) and
 [rendering design](docs/FOG-RENDERING.md).
 
 ## What is deliberately out of scope for version 1

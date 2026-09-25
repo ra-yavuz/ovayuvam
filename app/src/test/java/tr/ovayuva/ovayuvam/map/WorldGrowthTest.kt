@@ -92,4 +92,96 @@ class WorldGrowthTest {
         val growth = WorldGrowth(emptyList(),listOf(cell),10000)
         assertEquals(listOf(cell),growth.at(100).reveal)
     }
+
+    @Test fun replayCameraStartsCloseAndExpandsOnlyWithVisibleDiscoveries() {
+        val growth = WorldGrowth(emptyList(),listOf(reveal(10000,300),reveal(0,100),reveal(10,200)),400)
+        assertNull(growth.at(99).bounds)
+        val first = growth.at(100).bounds!!
+        assertEquals(first,growth.initialBounds)
+        assertEquals(first.west,first.east,0.0)
+        val middle = growth.at(200).bounds!!
+        val end = growth.at(400).bounds!!
+        assertTrue(middle.east > first.east)
+        assertTrue(end.east > middle.east + 1.0)
+        assertEquals(first,growth.at(100).bounds) // Seeking back excludes future places again.
+        assertEquals(end,growth.bounds)
+    }
+
+    @Test fun interiorDiscoveriesDoNotKeepMovingTheCamera() {
+        val growth = WorldGrowth(emptyList(),listOf(reveal(0,100),reveal(100,100),reveal(50,200)),300)
+        assertEquals(growth.at(100).bounds,growth.at(200).bounds)
+        assertEquals(growth.at(100).bounds,growth.initialBounds)
+        assertEquals(2,growth.at(100).reveal.size)
+    }
+
+    @Test fun legacyWorldStartsAtItsFirstPlaceDespiteLaterDistantTripsAndRevisits() {
+        val saved = listOf(
+            VisitedCell(10000,2,300,10000,500),
+            VisitedCell(1,2,100,10000,500),
+            VisitedCell(10,2,200,10000,500),
+        )
+        val growth = WorldGrowth(saved,emptyList(),10000)
+        val first = growth.at(100)
+        val middle = growth.at(200)
+        val last = growth.at(10000)
+        assertEquals(listOf(saved[1]),first.cells)
+        assertEquals(first.bounds,growth.initialBounds)
+        assertEquals(first.bounds!!.west,first.bounds.east,0.0)
+        assertTrue(middle.bounds!!.east > first.bounds.east)
+        assertTrue(last.bounds!!.east > middle.bounds.east + 1.0)
+        assertEquals(first,growth.at(100))
+        assertEquals(saved,last.cells)
+    }
+
+    @Test fun largeDatedHistoryDoesNotLeakItsFinalExtentIntoTheOpeningFrame() {
+        val saved = (0 until 10000).map { reveal(it,it.toLong()+100) }
+        val growth = WorldGrowth(emptyList(),saved,20000)
+        val first = growth.at(growth.firstSeenMs!!)
+        assertEquals(listOf(saved.first()),first.reveal)
+        assertEquals(first.bounds,growth.initialBounds)
+        assertEquals(first.bounds!!.west,first.bounds.east,0.0)
+        assertTrue(growth.bounds!!.east > first.bounds.east + 1.0)
+        assertEquals(saved,growth.at(20000).reveal)
+    }
+
+    @Test fun periodCameraIncludesItsBaselineButNotLaterTrips() {
+        val growth = WorldGrowth(emptyList(),listOf(reveal(0,time(1,1)),reveal(10,time(9,17)),
+            reveal(10000,time(9,22))),time(9,23))
+        val week = growth.range(GrowthPeriod.Week,zone)
+        assertEquals(growth.initialBounds,growth.at(week.startMs).bounds)
+        assertTrue(growth.at(time(9,17)).bounds!!.east < growth.at(week.endMs).bounds!!.east)
+    }
+
+    @Test fun replayCameraUsesLegacyAndUndatedBaselineWithoutInventingFutureBounds() {
+        val legacy = WorldGrowth(listOf(VisitedCell(1,2,100,200,1)),emptyList(),300)
+        assertNull(legacy.at(99).bounds)
+        assertEquals(WorldCell(1,2).centerPosition().latitude,legacy.at(100).bounds!!.south,0.0)
+        val growth = WorldGrowth(emptyList(),listOf(reveal(0,0),reveal(10,100),reveal(10000,500)),300)
+        assertNotNull(growth.at(0).bounds)
+        assertEquals(growth.bounds,growth.at(300).bounds)
+        assertTrue(growth.bounds!!.east < .01)
+    }
+
+    @Test fun expandingCameraCrossesDateLineWithoutWorldWideJump() {
+        fun point(lon: Double,time: Long): RevealCell {
+            val cell = WorldCell.fromLocation(10.0,lon,WorldCell.RevealCellSizeMeters)
+            return RevealCell(cell.x,cell.y,RevealCell.Kind.Core,time,time,1)
+        }
+        val growth = WorldGrowth(emptyList(),listOf(point(179.9,100),point(-179.9,200),point(-179.8,300)),400)
+        val first = growth.at(100).bounds!!
+        val second = growth.at(200).bounds!!
+        val last = growth.at(300).bounds!!
+        assertEquals(first.west,second.west,0.0)
+        assertEquals(second.west,last.west,0.0)
+        assertTrue(last.east-last.west < .31)
+    }
+
+    @Test fun cameraPaddingKeepsBrushesVisibleInGroundMetersAtHighLatitudes() {
+        val equator = GrowthBounds(0.0,0.0,0.0,0.0).padded()
+        val polar = GrowthBounds(80.0,0.0,80.0,0.0).padded()
+        assertTrue(equator.east > 0)
+        assertTrue(polar.east > equator.east*5)
+        assertEquals(equator.north,polar.north-80.0,1e-10)
+        assertTrue(GrowthBounds(85.051,0.0,85.051,0.0).padded().north <= 85.05112878)
+    }
 }

@@ -27,18 +27,26 @@ class ReleaseChecks : Instrumentation() {
     private var performance: String? = null
     private var raster = false
     private var tiles = false
+    private var growthCamera = false
     override fun onCreate(arguments: Bundle?) {
         visual = arguments?.getString("visual") == "true"
         notifications = arguments?.getString("notifications") == "true"
         performance = arguments?.getString("performance")
         raster = arguments?.getString("raster") == "true"
         tiles = arguments?.getString("tiles") == "true"
+        growthCamera = arguments?.getString("growthCamera") == "true"
         super.onCreate(arguments)
         start()
     }
     override fun onStart() {
         val result = Bundle()
         try {
+            if (growthCamera) {
+                checkGrowthCamera()
+                result.putString("stream", "PASS: progressive replay framing, rewind and saved history\n")
+                finish(-1, result)
+                return
+            }
             if (tiles) {
                 checkFogTiles()
                 result.putString("stream", "PASS: tile reuse, local invalidation, overview reuse, pixels, seams, replay, memory, cancellation\n")
@@ -105,6 +113,16 @@ class ReleaseChecks : Instrumentation() {
             repeat(2) { repo.importVisitCounts(snapshot) }
             repeat(4) { fix() }
             check(repo.allVisitCounts() == snapshot) { "Backup import duplicated counts" }
+            val beforeVisited = repo.allVisitedCells()
+            val beforeReveals = repo.allRevealCells()
+            val badImport = runCatching {
+                repo.importCells(listOf(VisitedCell(123456,654321,100,200,5)),
+                    listOf(RevealCell(123456,654321,RevealCell.Kind.Core,100,200,5)),
+                    listOf(VisitCount(123456,654321,-1,100,200)))
+            }
+            check(badImport.isFailure)
+            check(repo.allVisitedCells() == beforeVisited && repo.allRevealCells() == beforeReveals &&
+                repo.allVisitCounts() == snapshot) { "Failed import changed saved world" }
             repo.recordRevealCells((0..8100).map { WorldCell(it, 0) }, RevealCell.Kind.Core, 100L)
             check(repo.mapData(MapWindow(-85.0,-180.0,85.0,180.0,true)).reveal.size == 8101)
             check(repo.mapData(MapWindow(40.0,28.0,42.0,30.0)).reveal.isEmpty())

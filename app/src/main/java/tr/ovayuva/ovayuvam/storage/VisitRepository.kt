@@ -305,10 +305,11 @@ class VisitRepository(context: Context) {
 
     fun allRevealCells(): List<RevealCell> = revealCells(Int.MAX_VALUE)
 
-    fun importCells(visitedCells: List<VisitedCell>, revealCells: List<RevealCell>) {
+    fun importCells(visitedCells: List<VisitedCell>, revealCells: List<RevealCell>, visitCounts: List<VisitCount> = emptyList()) {
         db.writableDatabase.transaction {
             visitedCells.forEach { cell -> importCell(cell) }
             revealCells.forEach { cell -> importRevealCell(cell) }
+            if (visitCounts.isNotEmpty()) importVisitCounts(visitCounts)
         }
     }
 
@@ -411,7 +412,7 @@ class VisitRepository(context: Context) {
                 return
             }
         }
-        insert(
+        insertOrThrow(
             "visited_cells",
             null,
             ContentValues().apply {
@@ -443,7 +444,7 @@ class VisitRepository(context: Context) {
                 return
             }
         }
-        insert(
+        insertOrThrow(
             "reveal_cells",
             null,
             ContentValues().apply {

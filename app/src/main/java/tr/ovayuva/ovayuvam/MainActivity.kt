@@ -3,6 +3,8 @@ package tr.ovayuva.ovayuvam
 import android.Manifest
 import android.content.ComponentCallbacks2
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.RectF
@@ -33,7 +35,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,7 +75,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -101,8 +101,7 @@ import org.maplibre.geojson.Geometry
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.MultiLineString
 import org.maplibre.geojson.Point
-import tr.ovayuva.ovayuvam.backup.WorldBackup
-import tr.ovayuva.ovayuvam.backup.WorldBackupCodec
+import tr.ovayuva.ovayuvam.ui.BackupDocumentDialog
 import tr.ovayuva.ovayuvam.domain.GeoPosition
 import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.VisitedCell
@@ -202,7 +201,9 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     var infoOpen by remember { mutableStateOf(false) }
     var recenterRequest by remember { mutableIntStateOf(0) }
     var following by remember { mutableStateOf(true) }
-    var backupPassphrase by remember { mutableStateOf("") }
+    var backupUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var importingBackup by rememberSaveable { mutableStateOf(true) }
+    var worldRevision by remember { mutableIntStateOf(0) }
     var replayOpen by rememberSaveable { mutableStateOf(false) }
     var replayPeriod by rememberSaveable { mutableStateOf(GrowthPeriod.All) }
     var replayFraction by rememberSaveable { mutableFloatStateOf(0f) }
@@ -214,7 +215,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     val replayHasDiscoveries = remember(growth, replayRange) {
         replayRange?.let { growth?.hasDiscoveries(it) } == true
     }
-    val replayTime = replayRange?.timeAt(replayFraction)
+    val replayTime = replayRange?.timeAt(replayFraction)?.let { maxOf(it, growth?.firstSeenMs ?: it) }
     val replayFrame = remember(growth, replayTime) { replayTime?.let { growth?.at(it) } }
 
     BackHandler(enabled = replayOpen) { replayOpen = false }
@@ -285,39 +286,20 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        try {
-            val backup = WorldBackup(
-                visitedCells = repository.allVisitedCells(),
-                revealCells = repository.allRevealCells(),
-                goal = goal,
-                visitCounts = repository.allVisitCounts(),
-            )
-            val bytes = WorldBackupCodec.encrypt(backup, backupPassphrase)
-            val output = context.contentResolver.openOutputStream(uri)
-                ?: error("Could not open the selected export file.")
-            output.use { it.write(bytes) }
-            status = "Encrypted world exported"
-        } catch (error: Exception) {
-            status = "Export failed: ${error.userMessage()}"
-        }
+        runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+        importingBackup = false
+        infoOpen = false
+        backupUri = uri.toString()
     }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        try {
-            val input = context.contentResolver.openInputStream(uri)
-                ?: error("Could not open the selected backup file.")
-            val backup = input.use { WorldBackupCodec.decrypt(it.readBytes(), backupPassphrase) }
-            repository.importCells(backup.visitedCells, backup.revealCells)
-            repository.importVisitCounts(backup.visitCounts)
-            backup.goal?.let { importedGoal -> goalState.setGoal(importedGoal.position, importedGoal.createdMs) }
-            refresh()
-            status = "Encrypted world imported"
-        } catch (error: Exception) {
-            status = "Import failed: ${error.userMessage()}"
-        }
+        runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        importingBackup = true
+        infoOpen = false
+        backupUri = uri.toString()
     }
 
     LaunchedEffect(Unit) {
@@ -335,7 +317,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         }
     }
 
-    LaunchedEffect(replayOpen, lifecycle) {
+    LaunchedEffect(replayOpen, lifecycle, worldRevision) {
         if (replayOpen) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
@@ -372,23 +354,27 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 goalState.clearGoal()
                 goal = null
             },
-            backupPassphrase = backupPassphrase,
-            onBackupPassphraseChange = { backupPassphrase = it },
             onExportWorld = {
-                if (backupPassphrase.length < WorldBackupCodec.MinPassphraseLength) {
-                    status = "Use at least ${WorldBackupCodec.MinPassphraseLength} characters for the backup passphrase."
-                } else {
-                    exportLauncher.launch("ovayuvam-world-${System.currentTimeMillis()}.ovayuvam")
-                }
+                exportLauncher.launch("ovayuvam-world-${System.currentTimeMillis()}.ovayuvam")
             },
             onImportWorld = {
-                if (backupPassphrase.length < WorldBackupCodec.MinPassphraseLength) {
-                    status = "Use at least ${WorldBackupCodec.MinPassphraseLength} characters for the backup passphrase."
-                } else {
-                    importLauncher.launch(arrayOf("application/octet-stream", "application/json", "*/*"))
-                }
+                importLauncher.launch(arrayOf("*/*"))
             },
             onDismiss = { infoOpen = false },
+        )
+    }
+
+    backupUri?.let { selected ->
+        BackupDocumentDialog(
+            uri = Uri.parse(selected),
+            importing = importingBackup,
+            repository = repository,
+            onImported = { worldRevision++; refresh() },
+            onDismiss = {
+                val flags = if (importingBackup) Intent.FLAG_GRANT_READ_URI_PERMISSION else Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                runCatching { context.contentResolver.releasePersistableUriPermission(Uri.parse(selected), flags) }
+                backupUri = null
+            },
         )
     }
 
@@ -396,7 +382,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         FogWorldMap(
             visits = if (showHeat && !replayOpen) visits else emptyList(),
             replayOpen = replayOpen,
-            replayBounds = growth?.bounds,
+            replayBounds = replayFrame?.bounds ?: growth?.initialBounds,
             replayPanelHeightPx = replayPanelHeightPx,
             cells = if (growth != null && replayOpen) replayFrame?.cells.orEmpty() else cells,
             revealCells = if (growth != null && replayOpen) replayFrame?.reveal.orEmpty() else revealCells,
@@ -602,8 +588,6 @@ private fun InfoDialog(
     tracking: Boolean,
     goal: GoalPin?,
     onClearGoal: () -> Unit,
-    backupPassphrase: String,
-    onBackupPassphraseChange: (String) -> Unit,
     onExportWorld: () -> Unit,
     onImportWorld: () -> Unit,
     onDismiss: () -> Unit,
@@ -638,23 +622,12 @@ private fun InfoDialog(
                 Spacer(Modifier.height(6.dp))
                 Text("Export saves your revealed world and goal pin to an encrypted file. Keep the passphrase. It is needed after reinstall, and ovayuvam cannot recover it.")
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = backupPassphrase,
-                    onValueChange = onBackupPassphraseChange,
-                    label = { Text("Backup passphrase") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    supportingText = { Text("Use at least ${WorldBackupCodec.MinPassphraseLength} characters.") },
-                )
-                Spacer(Modifier.height(6.dp))
                 Row {
                     TextButton(
                         onClick = onExportWorld,
-                        enabled = backupPassphrase.length >= WorldBackupCodec.MinPassphraseLength,
                     ) { Text("Export world") }
                     TextButton(
                         onClick = onImportWorld,
-                        enabled = backupPassphrase.length >= WorldBackupCodec.MinPassphraseLength,
                     ) { Text("Import world") }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -713,6 +686,7 @@ private fun FogWorldMap(
     val latestGoalSelected by rememberUpdatedState(onGoalSelected)
     val latestUserMovedMap by rememberUpdatedState(onUserMovedMap)
     var beforeReplayCamera by remember { mutableStateOf<CameraPosition?>(null) }
+    var replayCameraReady by remember { mutableStateOf(false) }
     val density = LocalDensity.current.density
     var mapSize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -723,17 +697,21 @@ private fun FogWorldMap(
             replayBounds?.let { bounds ->
                 if (mapSize.height <= 0 || mapSize.width <= 0) return@let
                 val padding = (24 * density).roundToInt()
-                val area = LatLngBounds.from(
-                    (bounds.north + 0.0005).coerceAtMost(85.0), bounds.east + 0.0005,
-                    (bounds.south - 0.0005).coerceAtLeast(-85.0), bounds.west - 0.0005,
-                )
-                map.animateCamera(CameraUpdateFactory.newLatLngBounds(area, padding,
+                val framed = bounds.padded()
+                val area = LatLngBounds.from(framed.north, framed.east, framed.south, framed.west)
+                val update = CameraUpdateFactory.newLatLngBounds(area, padding,
                     min((104 * density).roundToInt(), mapSize.height / 5), padding,
-                    min(replayPanelHeightPx + padding, mapSize.height * 3 / 4)), 650)
+                    min(replayPanelHeightPx + padding, mapSize.height * 3 / 4))
+                if (replayCameraReady) map.easeCamera(update, 180)
+                else {
+                    map.moveCamera(update)
+                    replayCameraReady = true
+                }
             }
         } else {
             beforeReplayCamera?.let { if (!following) map.moveCamera(CameraUpdateFactory.newCameraPosition(it)) }
             beforeReplayCamera = null
+            replayCameraReady = false
         }
     }
 
