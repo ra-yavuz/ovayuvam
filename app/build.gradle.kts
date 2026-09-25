@@ -20,8 +20,8 @@ android {
         applicationId = "tr.ovayuva.ovayuvam"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "0.7.3"
+        versionCode = 28
+        versionName = "0.8.0"
 
         testInstrumentationRunner = "tr.ovayuva.ovayuvam.ReleaseChecks"
     }
@@ -62,6 +62,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {

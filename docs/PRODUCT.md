@@ -21,8 +21,8 @@ Version 1 is a private fog-of-war map:
 - Walk, travel, or explore.
 - See the full-screen real map clear in a soft radius where you have walked.
 - Let the fog hide unexplored streets strongly enough to invite new routes.
-- Long-press the map to place a private goal pin.
-- Follow the edge arrow when the goal pin is outside the visible map.
+- Enable optional weekly exploration suggestions near a settled location.
+- Follow the edge arrow when the Explore here pin is outside the visible map.
 - See a gentle foreground notification that can reflect today's progress.
 - Keep the data on the device.
 - Export an encrypted backup manually before changing phones or reinstalling.

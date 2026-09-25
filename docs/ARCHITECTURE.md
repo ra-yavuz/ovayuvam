@@ -12,7 +12,9 @@ ovayuva account. It uses internet access only for the real basemap.
   tracking is active and where the latest current cell is.
 - `DailyProgressStore`: small shared-preferences store for the current day's
   accepted walking distance and latest progress time, used only for notification text.
-- `GoalState`: small shared-preferences store for the optional private goal pin.
+- `GoalState`: legacy goal storage retained for backup compatibility.
+- `ExploreState`: opt-in resting-area detection, local road candidates, weekly
+  scheduling, expiry, and completion. `ExplorePolicy` holds the testable selection rules.
 - `WorldCell`: converts latitude and longitude into stable Web Mercator grid cells.
 - `VisitRepository`: stores visited cells in SQLite on the device.
 
@@ -113,9 +115,19 @@ Road and path reveal is not generated from saved cells when the map opens. Openi
 or resuming the map seeds the road tracker with the current position. Nearby
 rendered streets and paths are added only after fresh movement on the open map.
 
-The optional goal pin is a local latitude and longitude stored in shared
-preferences. The pin is drawn above the fog. If it is off screen at normal
-exploration zoom, an edge arrow points toward it.
+The optional weekly suggestion is a local latitude and longitude stored in
+shared preferences. Nearby road candidates are cached from already loaded
+OpenFreeMap transportation tiles while the map is open. The existing location
+worker can select a suggestion after an hour of accurate fixes within 60 metres;
+it does not download maps in the background. Selection reads only a nearby
+database window, checks the actual revealed brush boundary, and limits distance
+to 500 metres from both the current fix and the settled anchor. If data is missing
+or no eligible candidate exists, there is no marker. Selection is throttled to
+once per minute and issuing to once per seven days. Suggestions expire after
+three days; reaching within 25 metres or leaving the 500-metre vicinity clears
+them without bypassing the weekly interval. The ongoing silent notification
+can carry the invitation. The pin is drawn above the fog, with an edge arrow
+at normal exploration zoom. Manual long-press placement is no longer enabled.
 
 The map tile provider can see tile requests for the viewed area. The app does not
 send revealed cells, routes, accounts, or friend data to an ovayuva backend.

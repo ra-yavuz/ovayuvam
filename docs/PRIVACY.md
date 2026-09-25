@@ -14,7 +14,11 @@ The app records:
 - Confirmed visit counts and their first and most recent arrival times.
 - Approximate stay anchors, the chosen stay radius, and departure/arrival state
   used to avoid counting local movement or GPS drift as repeated visits.
-- Goal pin latitude and longitude, if the user sets a goal.
+- Weekly exploration preferences, one recent resting location, nearby road
+  candidates from already loaded map tiles, and the suggestion and its dates.
+  These stay on the phone. Disabling suggestions clears their active location
+  and candidate data; the previous suggestion and issue date remain to avoid
+  repeated invitations. Old backup goal pins remain stored for compatibility.
 - Today's accepted walking distance and latest progress time, used for notification text.
 
 The app does not record:

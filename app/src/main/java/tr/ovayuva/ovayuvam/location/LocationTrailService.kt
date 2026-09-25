@@ -32,11 +32,13 @@ class LocationTrailService : Service() {
     private lateinit var locationManager: LocationManager
     private lateinit var repository: VisitRepository
     private lateinit var trackingState: TrackingState
+    private lateinit var exploreState: ExploreState
     private lateinit var progressStore: DailyProgressStore
     private var listener: LocationListener? = null
     private var lastAcceptedLocation: Location? = null
     private var lastNotificationText: String? = null
     private var lastNotificationRefreshMs: Long = 0L
+    private var lastExploreCheckMs: Long = 0L
     private val notificationLock = Any()
     private val worker = HandlerThread("world-trail")
     private lateinit var workerHandler: Handler
@@ -56,6 +58,7 @@ class LocationTrailService : Service() {
         locationManager = getSystemService(LocationManager::class.java)
         repository = VisitRepository(this)
         trackingState = TrackingState(this)
+        exploreState = ExploreState(this)
         progressStore = DailyProgressStore(this)
         visitPreferences = VisitPreferences(this)
         bootId = Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1)
@@ -169,6 +172,14 @@ class LocationTrailService : Service() {
         lastAcceptedLocation = Location(location)
         val cell = location.toWorldCell()
         trackingState.setCurrentLocation(location.latitude, location.longitude, cell)
+        if (location.hasAccuracy() && location.accuracy <= 30f && ageMs in 0..15_000) {
+            val position = GeoPosition(location.latitude, location.longitude)
+            exploreState.observe(position, location.accuracy, now)
+            if (now - lastExploreCheckMs !in 0 until 60_000) {
+                lastExploreCheckMs = now
+                exploreState.suggest(repository, position, now)?.let { exploreState.offer(it, position, now) }
+            }
+        }
         refreshNotification(now)
     }
 
@@ -290,6 +301,9 @@ class LocationTrailService : Service() {
     }
 
     private fun notificationText(nowMs: Long): String {
+        exploreState.target(nowMs)?.let {
+            return "A little unexplored corner nearby. Your weekly Explore here pin is waiting."
+        }
         val todayStartMs = LocalDate.now(ZoneId.systemDefault())
             .atStartOfDay(ZoneId.systemDefault())
             .toInstant()

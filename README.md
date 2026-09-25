@@ -28,7 +28,7 @@ contains:
 - Translucent visit colors when zoomed out, fading away at street level.
 - Local return detection that groups movement within a stay and filters GPS drift.
 - An adjustable stay radius for larger homes or properties.
-- A private goal pin with an off-screen direction arrow.
+- Optional weekly nearby exploration suggestions with an off-screen direction arrow.
 - Automatic visible location tracking after permission is granted.
 - A silent foreground notification with rotating messages and local progress.
 - A read-only replay of first discoveries, by week, month, year, or all time.
@@ -40,7 +40,7 @@ contains:
 
 ## Download
 
-Version `0.7.3`, Android package `tr.ovayuva.ovayuvam`.
+Version `0.8.0`, Android package `tr.ovayuva.ovayuvam`.
 
 Visit [the product website](https://ovayuvam.ovayuva.tr/) to request a tester invitation.
 Downloads are through Google Play internal testing. This is not a public production release.
@@ -49,6 +49,14 @@ Install the update over the existing app to retain your revealed world, goal,
 and settings. Do not uninstall first. Visit counts have been recorded since
 version 0.6.0 and are retained by this update. Earlier GPS sample counts cannot
 tell us how many independent visits took place.
+
+Enable **Weekly exploration** in settings for an occasional nearby suggestion.
+After an hour in one area, a suitable unexplored street or path within 500 metres
+can be marked **Explore here**. There is at most one suggestion per seven days;
+it expires after three days. Map access information may be incomplete, so follow
+local signs. No suggestion is invented when suitable map data is unavailable.
+Long-press goal placement has been removed. Settings also show the installed
+version and build number.
 
 Open the info sheet and choose **Watch your world grow** to replay your saved
 discoveries. Pause, seek to a date, or choose a week, month, year, or all-time
@@ -78,7 +86,7 @@ add accounts, automatic cloud sync, or friend sharing.
 Version 0.7.2 uses reusable geographic fog tiles and smaller overview images when
 you zoom out. New exploration updates nearby tiles. The brush radius stays tied
 to real distance. Rendering pauses when the map is off screen; location tracking
-continues as before. See the [release notes](docs/RELEASE-0.7.3.md) and
+continues as before. See the [release notes](docs/RELEASE-0.8.0.md) and
 [rendering design](docs/FOG-RENDERING.md).
 
 ## What is deliberately out of scope for version 1

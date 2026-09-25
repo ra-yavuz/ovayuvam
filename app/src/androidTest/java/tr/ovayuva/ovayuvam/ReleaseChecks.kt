@@ -28,6 +28,64 @@ class ReleaseChecks : Instrumentation() {
     private var raster = false
     private var tiles = false
     private var growthCamera = false
+    private var exploration = false
+    private var exploreScene = false
+    private fun checkExploreScene() {
+        check(targetContext.packageName.endsWith(".verification"))
+        val home = GeoPosition(41.0082, 28.9784)
+        val now = System.currentTimeMillis()
+        targetContext.getSharedPreferences("explore", Context.MODE_PRIVATE).edit().clear().commit()
+        val state = ExploreState(targetContext)
+        state.enabled = true
+        for (minute in 60 downTo 0) state.observe(home, 8f, now - minute * 60_000)
+        TrackingState(targetContext).setCurrentLocation(home.latitude, home.longitude, WorldCell.fromLocation(home.latitude, home.longitude))
+        val repo = VisitRepository(targetContext)
+        repo.recordVisitArea(WorldCell.fromLocation(home.latitude, home.longitude), now, 0)
+        repo.recordRevealArea(WorldCell.fromLocation(home.latitude, home.longitude, 20.0), RevealCell.Kind.Core, now, 1)
+        repo.close()
+        startActivitySync(Intent(targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        val deadline = System.currentTimeMillis() + 120_000
+        while (state.target() == null && System.currentTimeMillis() < deadline) Thread.sleep(1000)
+        val target = checkNotNull(state.target()) { "No suggestion from loaded real map tiles" }
+        check(ExplorePolicy.distance(target.position, home) in 35.0..500.0)
+        File(targetContext.filesDir, "explore-result.json").writeText("""{"distanceMeters":${ExplorePolicy.distance(target.position, home)},"latitude":${target.position.latitude},"longitude":${target.position.longitude}}""")
+        Thread.sleep(4000)
+    }
+    private fun checkExploration() {
+        val ctx = object : ContextWrapper(targetContext) {
+            override fun getApplicationContext(): Context = this
+            override fun getSharedPreferences(name: String, mode: Int) = super.getSharedPreferences("test-explore-$name", mode)
+        }
+        ctx.getSharedPreferences("explore", Context.MODE_PRIVATE).edit().clear().commit()
+        val state = ExploreState(ctx)
+        val home = GeoPosition(41.0, 29.0)
+        val target = GeoPosition(41.0005, 29.0)
+        var now = 1_000_000L
+        check(!state.enabled && state.target(now) == null)
+        state.enabled = true
+        state.observe(home, 10f, now)
+        check(state.anchor(now) == null && !state.offer(target, home, now))
+        repeat(60) { now += 60_000; state.observe(home, 10f, now) }
+        check(state.anchor(now) == home)
+        check(state.offer(target, home, now))
+        check(ExploreState(ctx).target(now)?.position == target)
+        check(!state.offer(target, home, now))
+        state.observe(target, 10f, now + 1000)
+        check(state.target(now + 1000) == null)
+        check(!state.due(now + ExplorePolicy.LifetimeMs))
+        state.enabled = false
+        check(state.target(now) == null && state.anchor(now) == null)
+        state.enabled = true
+        check(!state.due(now + 1000))
+        now += ExplorePolicy.WeekMs
+        state.observe(home, 10f, now)
+        check(state.anchor(now) == null)
+        repeat(60) { now += 60_000; state.observe(home, 10f, now) }
+        check(state.offer(target, home, now))
+        check(state.target(now + ExplorePolicy.LifetimeMs) == null)
+        check(state.anchor(now + ExplorePolicy.MaxGapMs + 1) == null)
+        ctx.getSharedPreferences("explore", Context.MODE_PRIVATE).edit().clear().commit()
+    }
     override fun onCreate(arguments: Bundle?) {
         visual = arguments?.getString("visual") == "true"
         notifications = arguments?.getString("notifications") == "true"
@@ -35,12 +93,26 @@ class ReleaseChecks : Instrumentation() {
         raster = arguments?.getString("raster") == "true"
         tiles = arguments?.getString("tiles") == "true"
         growthCamera = arguments?.getString("growthCamera") == "true"
+        exploration = arguments?.getString("exploration") == "true"
+        exploreScene = arguments?.getString("exploreScene") == "true"
         super.onCreate(arguments)
         start()
     }
     override fun onStart() {
         val result = Bundle()
         try {
+            if (exploreScene) {
+                checkExploreScene()
+                result.putString("stream", "PASS: real map tiles select nearby unrevealed street and draw Explore here\n")
+                finish(-1, result)
+                return
+            }
+            if (exploration) {
+                checkExploration()
+                result.putString("stream", "PASS: exploration opt-in, rest, stale fixes, reach, expiry, weekly limit, restart\n")
+                finish(-1, result)
+                return
+            }
             if (growthCamera) {
                 checkGrowthCamera()
                 result.putString("stream", "PASS: progressive replay framing, rewind and saved history\n")

@@ -107,7 +107,9 @@ import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.VisitedCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.location.GoalPin
-import tr.ovayuva.ovayuvam.location.GoalState
+import androidx.compose.ui.unit.sp
+import tr.ovayuva.ovayuvam.location.ExploreState
+import tr.ovayuva.ovayuvam.location.ExplorePolicy
 import tr.ovayuva.ovayuvam.location.LocationTrailService
 import tr.ovayuva.ovayuvam.location.TrackingState
 import tr.ovayuva.ovayuvam.location.VisitPreferences
@@ -182,7 +184,8 @@ private data class RevealMark(
 private fun OvayuvamScreen(repository: VisitRepository) {
     val context = LocalContext.current
     val trackingState = remember { TrackingState(context) }
-    val goalState = remember { GoalState(context) }
+    val exploreState = remember { ExploreState(context) }
+    var exploreEnabled by remember { mutableStateOf(exploreState.enabled) }
     val visitPreferences = remember { VisitPreferences(context) }
     var showHeat by remember { mutableStateOf(visitPreferences.showHeat) }
     var stayRadius by remember { mutableIntStateOf(visitPreferences.stayRadius) }
@@ -195,7 +198,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     var visitsStarted by remember { mutableStateOf<Long?>(null) }
     var currentCell by remember { mutableStateOf(trackingState.currentCell()) }
     var currentPosition by remember { mutableStateOf(trackingState.currentPosition()) }
-    var goal by remember { mutableStateOf(goalState.goal()) }
+    var goal by remember { mutableStateOf(exploreState.target()) }
     var tracking by remember { mutableStateOf(trackingState.isTracking()) }
     var status by remember { mutableStateOf("Revealing your world") }
     var infoOpen by remember { mutableStateOf(false) }
@@ -257,7 +260,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     fun refresh() {
         currentCell = trackingState.currentCell()
         currentPosition = trackingState.currentPosition()
-        goal = goalState.goal()
+        goal = exploreState.target()
         tracking = trackingState.isTracking()
     }
 
@@ -349,9 +352,10 @@ private fun OvayuvamScreen(repository: VisitRepository) {
             onStayRadiusChange = { stayRadius = it; visitPreferences.stayRadius = it },
             visitsStarted = visitsStarted,
             tracking = tracking,
-            goal = goal,
-            onClearGoal = {
-                goalState.clearGoal()
+            exploreEnabled = exploreEnabled,
+            onExploreChange = {
+                exploreEnabled = it
+                exploreState.enabled = it
                 goal = null
             },
             onExportWorld = {
@@ -389,13 +393,17 @@ private fun OvayuvamScreen(repository: VisitRepository) {
             currentCell = if (replayOpen) null else currentCell,
             currentPosition = if (replayOpen) null else currentPosition,
             goal = if (replayOpen) null else goal,
+            exploreEnabled = exploreEnabled && !replayOpen,
             following = following && !replayOpen,
             recenterRequest = recenterRequest,
             onUserMovedMap = { if (!replayOpen) following = false },
             onGoalSelected = { position ->
                 if (!replayOpen) {
-                    goal = goalState.setGoal(position)
-                    status = "Goal set"
+                    val current = currentPosition
+                    if (current != null && exploreState.offer(position, current, System.currentTimeMillis())) {
+                        goal = exploreState.target()
+                        status = "Explore here: a little more of your world"
+                    }
                 }
             },
             onRoadCellsObserved = { cells ->
@@ -586,8 +594,8 @@ private fun InfoDialog(
     onStayRadiusChange: (Int) -> Unit,
     visitsStarted: Long?,
     tracking: Boolean,
-    goal: GoalPin?,
-    onClearGoal: () -> Unit,
+    exploreEnabled: Boolean,
+    onExploreChange: (Boolean) -> Unit,
     onExportWorld: () -> Unit,
     onImportWorld: () -> Unit,
     onDismiss: () -> Unit,
@@ -612,7 +620,11 @@ private fun InfoDialog(
                 Spacer(Modifier.height(10.dp))
                 Text("Your own world starts immediately after location permission is granted.")
                 Spacer(Modifier.height(10.dp))
-                Text("Long-press the map to place a private goal pin. If the pin is off screen, the arrow points toward it.")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Weekly exploration", Modifier.weight(1f))
+                    Switch(checked = exploreEnabled, onCheckedChange = onExploreChange)
+                }
+                Text("One nearby street or path beyond your explored world, after an hour in one area. Suggestions last three days. Follow local signs and access rules.", style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(10.dp))
                 Text("The visible map uses OpenFreeMap tiles. Your revealed world is stored as local cells on this phone. There is no ovayuva account, no ads, and no ovayuva backend.")
                 Spacer(Modifier.height(10.dp))
@@ -620,7 +632,7 @@ private fun InfoDialog(
                 Spacer(Modifier.height(10.dp))
                 Text("Encrypted backup")
                 Spacer(Modifier.height(6.dp))
-                Text("Export saves your revealed world and goal pin to an encrypted file. Keep the passphrase. It is needed after reinstall, and ovayuvam cannot recover it.")
+                Text("Export saves your revealed world to an encrypted file. Keep the passphrase. It is needed after reinstall, and ovayuvam cannot recover it.")
                 Spacer(Modifier.height(8.dp))
                 Row {
                     TextButton(
@@ -633,23 +645,13 @@ private fun InfoDialog(
                 Spacer(Modifier.height(10.dp))
                 Text("Privacy policy: https://ovayuva.tr/yuvam/privacy/")
                 Spacer(Modifier.height(10.dp))
+                Text("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(10.dp))
                 Text("Map data: ${BasemapStyle.Attribution}. Operator: Ramazan Yavuz. Contact: yavuzramazan1994@gmail.com. No warranty is provided.")
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
-        },
-        dismissButton = if (goal != null) {
-            {
-                TextButton(
-                    onClick = {
-                        onClearGoal()
-                        onDismiss()
-                    },
-                ) { Text("Clear goal") }
-            }
-        } else {
-            null
         },
     )
 }
@@ -665,6 +667,7 @@ private fun FogWorldMap(
     currentCell: WorldCell?,
     currentPosition: GeoPosition?,
     goal: GoalPin?,
+    exploreEnabled: Boolean,
     following: Boolean,
     recenterRequest: Int,
     onUserMovedMap: () -> Unit,
@@ -689,6 +692,46 @@ private fun FogWorldMap(
     var replayCameraReady by remember { mutableStateOf(false) }
     val density = LocalDensity.current.density
     var mapSize by remember { mutableStateOf(IntSize.Zero) }
+
+    LaunchedEffect(activeMap, exploreEnabled, mapResumed) {
+        val map = activeMap ?: return@LaunchedEffect
+        if (!exploreEnabled || !mapResumed) return@LaunchedEffect
+        val exploration = ExploreState(context)
+        while (true) {
+            val now = System.currentTimeMillis()
+            val current = TrackingState(context).currentPosition()
+            if (current != null && exploration.due(now) && map.cameraPosition.zoom >= 14) {
+                val source = map.style?.getSourceAs<org.maplibre.android.style.sources.VectorSource>("openfreemap")
+                val roads = runCatching { source?.querySourceFeatures(arrayOf("transportation"), null).orEmpty() }
+                    .getOrDefault(emptyList())
+                val suggestion = withContext(Dispatchers.IO) {
+                    val candidates = ArrayList<GeoPosition>()
+                    roads.take(10_000).forEach { feature ->
+                        val tags = listOf("class", "subclass", "access", "foot", "indoor", "brunnel")
+                            .associateWith { key -> runCatching { feature.getStringProperty(key) }.getOrNull().orEmpty() }
+                        if (ExplorePolicy.walkable(tags)) feature.geometry().linePointLists().forEach { line ->
+                            line.zipWithNext().forEach { (a, b) ->
+                                val start = a.toGeoPosition()
+                                val end = b.toGeoPosition()
+                                // Skip distant segments before sampling; never search the panned-to city.
+                                if (ExplorePolicy.distance(start, current) <= 1000 && ExplorePolicy.distance(end, current) <= 1000) {
+                                    val steps = ceil(ExplorePolicy.distance(start, end) / 10).toInt().coerceIn(1, 200)
+                                    for (step in 0..steps) if (candidates.size < 5_000) candidates += start.interpolate(end, step.toDouble() / steps)
+                                }
+                            }
+                        }
+                    }
+                    exploration.cacheCandidates(candidates, current, now)
+                    val repository = VisitRepository(context)
+                    try {
+                        exploration.suggest(repository, current, now)
+                    } finally { repository.close() }
+                }
+                if (suggestion != null) latestGoalSelected(suggestion)
+            }
+            delay(60_000)
+        }
+    }
 
     LaunchedEffect(activeMap, replayOpen, replayBounds, mapSize, replayPanelHeightPx) {
         val map = activeMap ?: return@LaunchedEffect
@@ -783,10 +826,6 @@ private fun FogWorldMap(
                     map.addOnCameraMoveListener { cameraTick.intValue += 1 }
                     map.addOnCameraIdleListener {
                         cameraTick.intValue += 1
-                    }
-                    map.addOnMapLongClickListener { latLng ->
-                        latestGoalSelected(GeoPosition(latitude = latLng.latitude, longitude = latLng.longitude))
-                        true
                     }
                     map.setStyle(Style.Builder().fromJson(BasemapStyle.json())) {
                         cameraTick.intValue += 1
@@ -987,6 +1026,13 @@ private fun DrawScope.drawGoal(map: MapLibreMap, goal: GoalPin) {
     val visible = point.x in 0f..size.width && point.y in 0f..size.height
     if (visible) {
         drawGoalPin(point)
+        drawContext.canvas.nativeCanvas.drawText("Explore here", point.x, point.y - 54.dp.toPx(),
+            android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE
+                textSize = 14.sp.toPx()
+                textAlign = android.graphics.Paint.Align.CENTER
+                setShadowLayer(3.dp.toPx(), 0f, 0f, android.graphics.Color.BLACK)
+            })
     } else if (map.cameraPosition.zoom >= GoalArrowMinZoom) {
         drawGoalArrow(point)
     }
