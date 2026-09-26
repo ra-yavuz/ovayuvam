@@ -133,8 +133,18 @@ fun Instrumentation.checkWorldControls() {
     check(has(context.getString(R.string.show_area))) {
         "Badge missing: " + nodes(uiAutomation.rootInActiveWindow).joinToString { "${it.packageName}:${it.text}/${it.contentDescription}" }
     }
+    fun badgeBounds(label: String): Rect = Rect().also { rect ->
+        checkNotNull(nodes(uiAutomation.rootInActiveWindow).firstOrNull { it.contentDescription?.toString() == label })
+            .getBoundsInScreen(rect)
+    }
+    val logoBounds = badgeBounds(context.getString(R.string.show_area))
+    val density = context.resources.displayMetrics.density
+    check(logoBounds.width() / density < 225f && logoBounds.height() / density in 48f..60f) {
+        "Badge must be compact with a usable tap target: $logoBounds"
+    }
     tap(context.getString(R.string.show_area))
     check(MapPreferences(context).showArea && has(context.getString(R.string.show_logo)))
+    check(badgeBounds(context.getString(R.string.show_logo)) == logoBounds) { "Flipping resized the badge" }
     runOnMainSync { activity.finish() }; Thread.sleep(1000)
     activity = launch(); loadMap()
     check(MapPreferences(context).showArea && has(context.getString(R.string.show_logo)))

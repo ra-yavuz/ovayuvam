@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,22 +61,26 @@ fun WorldBadge(total: Double, today: Double, pinned: Boolean, onPinned: (Boolean
     val totalText = stringResource(R.string.area_total, format.format(total.toLong()))
     val todayText = stringResource(R.string.area_today, format.format(today.toLong()))
     val action = stringResource(if (showArea) R.string.show_logo else R.string.show_area)
-    // Both faces share a stable footprint, including at larger accessibility text sizes.
+    val areaVisible = rotation > 90
+    fun face(visible: Boolean) = Modifier.graphicsLayer { alpha = if (visible) 1f else 0f }
+        .then(if (visible) Modifier else Modifier.clearAndSetSemantics { })
+    // Measure both faces so flipping stays stable, while large text can wrap and grow.
     Surface(onClick = { val next = !showArea; preview = false; interaction++; onPinned(next) }, color = Color.Transparent,
-        modifier = modifier.widthIn(max = 260.dp).width(236.dp)
-            .height((80 * density.fontScale).dp)
+        modifier = modifier.widthIn(min = 168.dp, max = 220.dp).width(IntrinsicSize.Max)
+            .heightIn(min = 48.dp)
             .semantics { contentDescription = action }
             .graphicsLayer { rotationY = rotation; cameraDistance = 16 * density.density }
             .sketchSurface(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f), MaterialTheme.colorScheme.outline, seed = 17)) {
-        Box(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-            .graphicsLayer { rotationY = if (rotation > 90) 180f else 0f }, contentAlignment = Alignment.Center) {
-            if (rotation > 90) Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            .graphicsLayer { rotationY = if (areaVisible) 180f else 0f }, contentAlignment = Alignment.Center) {
+            Column(face(areaVisible), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(totalText, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Text(todayText, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(painterResource(R.drawable.launcher_map_foreground), null, Modifier.size(32.dp),
+            }
+            Row(face(!areaVisible), verticalAlignment = Alignment.CenterVertically) {
+                Image(painterResource(R.drawable.launcher_map_foreground), null, Modifier.size(26.dp),
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary))
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(6.dp))
                 Text("ovayuvam", style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
