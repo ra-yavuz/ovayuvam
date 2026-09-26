@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="area_total">"Gesamt: ≈ %1$s m²"</string>
+    <string name="area_today">"Heute: ≈ %1$s m²"</string>
+    <string name="show_logo">"ovayuvam-Logo anzeigen"</string>
+    <string name="show_area">"Erkundete Fläche anzeigen"</string>
+    <string name="about_setting">"Über %1$s"</string>
+    <string name="map_credits">"Kartennachweise"</string>
+    <string name="share_world">"Meine Welt teilen"</string>
+    <string name="share_text">"Meine Welt in ovayuvam, einer kostenlosen App, die meine erkundeten Orte aufdeckt. %1$s"</string>
+    <string name="share_failed">"Die Karte konnte nicht geteilt werden. Bitte versuche es erneut."</string>
+    <string name="help_share">"Teile ein Bild des aktuellen Kartenausschnitts samt Zoomstufe und einem Link zu ovayuvam. Der Nebel bleibt sichtbar. Prüfe die Karte vorher: Deine Entdeckungen und dein Standort können zeigen, wo du wohnst oder Zeit verbringst. Erst wenn du in Android einen Empfänger auswählst, wird etwas gesendet."</string>
+    <string name="help_tracking">"Zeichne deinen Standort auf, um unterwegs den Nebel zu lichten, auch bei ausgeschaltetem Bildschirm. Deine Welt bleibt auf diesem Telefon. Pausiere hier oder in der dauerhaften Benachrichtigung; bisherige Entdeckungen bleiben erhalten. Android muss den Standortzugriff erlauben."</string>
+    <string name="help_growth">"Sieh dir an, wie deine Welt gewachsen ist. Die Ansicht beginnt bei deinen ersten Entdeckungen und weitet sich, wenn du weiter entfernte Orte erkundest. Wähle einen Zeitraum, pausiere oder bewege die Zeitleiste. Die Wiedergabe verändert deine gespeicherte Welt nicht."</string>
+    <string name="help_fog">"Bestimme, wie stark der Nebel unbesuchte Orte verdeckt. Weniger Deckkraft macht Wege besser sichtbar; mehr Deckkraft verbirgt mehr Details. Vollständig entfernen lässt sich der Nebel damit nicht. Entdeckungen und gemalte Pläne bleiben unverändert."</string>
+    <string name="help_visits">"Wenn du auf mehrere Straßenblöcke oder weiter herauszoomst, zeigen durchscheinende Farben, wie oft du in ein Gebiet zurückkehrst. Mehr Besuche ergeben kräftigere Farben. Stillstehen, GPS-Abweichungen und Bewegungen innerhalb eines Aufenthaltsbereichs zählen nicht als neue Besuche. Beim Hineinzoomen erscheint die normale Karte."</string>
+    <string name="help_weekly">"Nach etwa einer Stunde in einem Gebiet kann ovayuvam eine unerkundete Straße oder einen Weg im Umkreis von 500 Metern vorschlagen. Pro Woche gibt es höchstens einen Vorschlag, der nach drei Tagen abläuft. Vorschläge hängen von den verfügbaren Kartendaten ab. Beachte Schilder und Zugangsregeln; eine Markierung garantiert keinen sicheren oder zugänglichen Weg."</string>
+    <string name="help_world">"Deine Entdeckungen, Besuche und gemalten Pläne werden auf diesem Telefon gespeichert. Exportiere vor einer Neuinstallation oder einem Handywechsel eine verschlüsselte Sicherung. Bewahre die Datei und ihr Passwort auf. Ein geteiltes Kartenbild ist keine Sicherung."</string>
+    <string name="help_export">"Speichere über die Android-Dateiauswahl eine verschlüsselte Kopie deiner Welt. Du kannst lokalen Speicher oder ein verbundenes Cloud-Laufwerk wählen. Wähle ein Passwort und bewahre es sicher auf; es kann nicht wiederhergestellt werden."</string>
+    <string name="help_import">"Wähle eine originale ovayuvam-Sicherung und gib ihr Passwort ein. Importierte Entdeckungen werden mit deiner bestehenden Welt zusammengeführt, ohne sie zu löschen. Dateien auf einem Cloud-Laufwerk müssen herunterladbar sein."</string>
+    <string name="help_language">"Telefonsprache folgt den Android-Spracheinstellungen. Die App und ihre Benachrichtigungen unterstützen Englisch, Deutsch, Türkisch, Russisch, Spanisch und Französisch. Du kannst hier auch eine Sprache wählen. Bei anderen Telefonsprachen wird Englisch verwendet."</string>
+    <string name="help_privacy">"Erfahre, wie Standortdaten, Kartenabrufe und verschlüsselte Sicherungen behandelt werden. Deine Welt wird lokal gespeichert. Beim Teilen werden nur das Bild und der Text an die gewählte App übergeben, nicht deine Weltdatenbank."</string>
+</resources>

@@ -15,7 +15,8 @@ object TrackingNotification {
     const val Id = 1001
 
     fun ensureChannel(context: Context) {
-        val channel = NotificationChannel(ChannelId, context.getString(R.string.tracking_channel_name),
+        val localized = tr.ovayuva.ovayuvam.ui.AppLanguage.wrap(context)
+        val channel = NotificationChannel(ChannelId, localized.getString(R.string.tracking_channel_name),
             NotificationManager.IMPORTANCE_LOW).apply {
             setSound(null, null)
             enableVibration(false)

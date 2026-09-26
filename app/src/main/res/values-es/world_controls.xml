@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="area_total">"Total: ≈ %1$s m²"</string>
+    <string name="area_today">"Hoy: ≈ %1$s m²"</string>
+    <string name="show_logo">"Mostrar el logo de ovayuvam"</string>
+    <string name="show_area">"Mostrar el área explorada"</string>
+    <string name="about_setting">"Acerca de %1$s"</string>
+    <string name="map_credits">"Créditos del mapa"</string>
+    <string name="share_world">"Compartir mi mundo"</string>
+    <string name="share_text">"Mi mundo en ovayuvam, una app gratuita que revela los lugares que exploro. %1$s"</string>
+    <string name="share_failed">"No se pudo compartir el mapa. Inténtalo de nuevo."</string>
+    <string name="help_share">"Comparte una imagen del mapa con su posición y nivel de zoom actuales y un enlace a ovayuvam. La niebla se mantiene en la imagen. Revisa el mapa primero: tus descubrimientos y ubicación pueden revelar dónde vives o pasas tiempo. No se envía nada hasta que elijas un destinatario en Android."</string>
+    <string name="help_tracking">"Registra tu ubicación para despejar la niebla al moverte, incluso con la pantalla apagada. Tu mundo se queda en este teléfono. Puedes pausar aquí o en la notificación permanente; se conservan tus descubrimientos. Android debe permitir el acceso a la ubicación."</string>
+    <string name="help_growth">"Vuelve a ver cómo ha crecido tu mundo. La vista empieza en tus primeros descubrimientos y se amplía al explorar más lejos. Elige un periodo, pausa o mueve la línea de tiempo. La reproducción no cambia tu mundo guardado."</string>
+    <string name="help_fog">"Elige cuánto oculta la niebla los lugares que no has visitado. Una opacidad menor permite ver mejor los caminos; una mayor oculta más detalles. No permite eliminar la niebla por completo. No cambia tus descubrimientos ni las rutas pintadas."</string>
+    <string name="help_visits">"Al alejar el mapa hasta ver varias manzanas o más, los colores translúcidos muestran con qué frecuencia vuelves a una zona. Más visitas dan colores más intensos. Estar quieto, las desviaciones del GPS y moverte dentro de una misma zona de estancia no cuentan como visitas nuevas. Acerca el mapa para volver a la vista habitual."</string>
+    <string name="help_weekly">"Tras aproximadamente una hora en una zona, ovayuvam puede sugerir una calle o camino sin explorar a menos de 500 metros. Aparece como máximo una sugerencia por semana y caduca a los tres días. Depende de los datos del mapa disponibles. Comprueba las señales y las normas de acceso; una marca no garantiza una ruta segura o accesible."</string>
+    <string name="help_world">"Tus descubrimientos, visitas y rutas pintadas se guardan en este teléfono. Exporta una copia cifrada antes de reinstalar o cambiar de teléfono. Conserva el archivo y su contraseña. Compartir una imagen del mapa no crea una copia de seguridad."</string>
+    <string name="help_export">"Guarda una copia cifrada de tu mundo con el selector de archivos de Android. Puedes elegir almacenamiento local o una unidad en la nube conectada. Elige una contraseña y guárdala bien; no se puede recuperar."</string>
+    <string name="help_import">"Elige una copia original de ovayuvam e introduce su contraseña. Los descubrimientos importados se unen a tu mundo actual sin borrarlo. Si el archivo está en la nube, debe estar disponible para descargar."</string>
+    <string name="help_language">"Idioma del teléfono sigue la configuración de Android. La app y sus notificaciones están disponibles en inglés, alemán, turco, ruso, español y francés. También puedes elegir un idioma aquí. Para otros idiomas del teléfono se usa el inglés."</string>
+    <string name="help_privacy">"Consulta cómo se gestionan la ubicación, las descargas del mapa y las copias cifradas. Tu mundo se guarda localmente. Al compartir, solo se pasan la imagen y el texto a la app elegida, no la base de datos de tu mundo."</string>
+</resources>

@@ -46,6 +46,7 @@ fun GrowthControls(
         if (!compact) Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(if (hasDiscoveries) R.string.growth_title else R.string.growth_empty),
                 Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            SettingHelp(R.string.watch_growth, R.string.help_growth)
             ReplayAction(Icons.Default.Close, stringResource(R.string.close_replay), onClose)
         }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -81,7 +82,10 @@ fun GrowthControls(
                 stringResource(if (playing) R.string.pause_replay else R.string.play_replay), onPlayPause, hasDiscoveries)
             Text(DateFormat.getDateInstance(DateFormat.MEDIUM, LocalConfiguration.current.locales[0]).format(Date(dateMs)),
                 Modifier.weight(1f).padding(start = 8.dp), style = MaterialTheme.typography.bodyMedium)
-            if (compact) ReplayAction(Icons.Default.Close, stringResource(R.string.close_replay), onClose)
+            if (compact) {
+                SettingHelp(R.string.watch_growth, R.string.help_growth)
+                ReplayAction(Icons.Default.Close, stringResource(R.string.close_replay), onClose)
+            }
         }
     }
 }

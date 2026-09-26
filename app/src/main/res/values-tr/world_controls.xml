@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="area_total">"Toplam: ≈ %1$s m²"</string>
+    <string name="area_today">"Bugün: ≈ %1$s m²"</string>
+    <string name="show_logo">"ovayuvam logosunu göster"</string>
+    <string name="show_area">"Keşfedilen alanı göster"</string>
+    <string name="about_setting">"%1$s hakkında"</string>
+    <string name="map_credits">"Harita kaynakları"</string>
+    <string name="share_world">"Dünyamı paylaş"</string>
+    <string name="share_text">"Gezdiğim yerleri açığa çıkaran ücretsiz ovayuvam uygulamasındaki dünyam. %1$s"</string>
+    <string name="share_failed">"Harita paylaşılamadı. Lütfen tekrar dene."</string>
+    <string name="help_share">"Haritanın mevcut konumunu ve yakınlaştırma düzeyini gösteren bir resmi ovayuvam bağlantısıyla paylaş. Sis resimde kalır. Önce haritayı kontrol et: Keşiflerin ve konumun, nerede yaşadığını veya vakit geçirdiğini gösterebilir. Android’de bir alıcı seçmeden hiçbir şey gönderilmez."</string>
+    <string name="help_tracking">"Ekran kapalıyken de dahil, hareket ettikçe sisi kaldırmak için konumunu kaydet. Dünyan bu telefonda kalır. Buradan veya kalıcı bildirimden duraklatabilirsin; önceki keşiflerin korunur. Android’de konum erişimine izin verilmiş olmalı."</string>
+    <string name="help_growth">"Dünyanın nasıl büyüdüğünü yeniden izle. Görünüm ilk keşiflerinden başlar ve daha uzak yerleri keşfettikçe genişler. Bir zaman aralığı seç, duraklat veya zaman çizelgesini kaydır. Yeniden oynatma, kayıtlı dünyanı değiştirmez."</string>
+    <string name="help_fog">"Sisin ziyaret etmediğin yerleri ne kadar gizlediğini seç. Düşük opaklık yolları daha görünür yapar; yüksek opaklık daha fazla ayrıntıyı gizler. Sis tamamen kaldırılamaz. Bu ayar keşiflerini veya çizdiğin planları değiştirmez."</string>
+    <string name="help_visits">"Birkaç sokak adasını veya daha geniş bir alanı görecek kadar uzaklaştırdığında, yarı saydam renkler bir bölgeye ne sıklıkta döndüğünü gösterir. Ziyaret arttıkça renk güçlenir. Sabit durmak, GPS sapması ve aynı konaklama alanında dolaşmak yeni ziyaret sayılmaz. Yakınlaştırınca normal harita görünür."</string>
+    <string name="help_weekly">"Bir bölgede yaklaşık bir saat kaldıktan sonra ovayuvam, 500 metre içinde keşfedilmemiş bir sokak veya yol önerebilir. Haftada en fazla bir öneri gösterilir ve üç gün sonra sona erer. Öneriler mevcut harita verilerine bağlıdır. Tabelaları ve erişim kurallarını kontrol et; işaret güvenli veya ulaşılabilir bir yol garantisi değildir."</string>
+    <string name="help_world">"Keşiflerin, ziyaret geçmişin ve çizdiğin planlar bu telefonda saklanır. Uygulamayı yeniden kurmadan veya telefon değiştirmeden önce şifreli bir yedek dışa aktar. Hem dosyayı hem parolasını sakla. Paylaşılan harita resmi bir yedek değildir."</string>
+    <string name="help_export">"Android dosya seçicisiyle dünyanın şifreli bir kopyasını kaydet. Telefon depolamasını veya bağlı bir bulut sürücüsünü seçebilirsin. Bir parola belirle ve güvenle sakla; parola kurtarılamaz."</string>
+    <string name="help_import">"Orijinal bir ovayuvam yedeği seç ve parolasını gir. İçe aktarılan keşifler mevcut dünyanla birleştirilir, onu silmez. Bulut sürücüsündeki dosyanın indirilebilir olması gerekir."</string>
+    <string name="help_language">"Telefon dili, Android dil ayarlarını izler. Uygulama ve bildirimleri İngilizce, Almanca, Türkçe, Rusça, İspanyolca ve Fransızcayı destekler. Buradan farklı bir dil de seçebilirsin. Diğer telefon dillerinde İngilizce kullanılır."</string>
+    <string name="help_privacy">"Konumun, harita indirmelerinin ve şifreli yedeklerin nasıl işlendiğini oku. Dünyan yerel olarak saklanır. Paylaşırken seçtiğin uygulamaya yalnızca resim ve metin gönderilir, dünya veritabanın değil."</string>
+</resources>

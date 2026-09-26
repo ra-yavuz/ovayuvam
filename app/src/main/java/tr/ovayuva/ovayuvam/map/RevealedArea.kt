@@ -22,16 +22,16 @@ class RevealedArea {
     var renderedTiles = 0
         private set
 
-    suspend fun update(cells: List<VisitedCell>, reveals: List<RevealCell>): Double = mutex.withLock {
+    suspend fun update(cells: List<VisitedCell>, reveals: List<RevealCell>, excludeDay: DiscoveryDay? = null): Double = mutex.withLock {
         val context = currentCoroutineContext()
         val next = HashMap<FogMarkId, FogTileMark>()
         fun add(id: FogMarkId) { next[id] = FogTileMark(id, 1, 0) }
         if (reveals.isNotEmpty()) reveals.forEachIndexed { i, cell ->
             if (i % 256 == 0) context.ensureActive()
-            add(FogMarkId(cell.x, cell.y, cell.kind == RevealCell.Kind.Road, false))
+            if (excludeDay?.contains(cell.firstSeenMs) != true) add(FogMarkId(cell.x, cell.y, cell.kind == RevealCell.Kind.Road, false))
         } else cells.forEachIndexed { i, cell ->
             if (i % 256 == 0) context.ensureActive()
-            add(FogMarkId(cell.x, cell.y, false, true))
+            if (excludeDay?.contains(cell.firstSeenMs) != true) add(FogMarkId(cell.x, cell.y, false, true))
         }
         val removed = marks.filterKeys { it !in next }.values
         val added = next.filterKeys { it !in marks }.values

@@ -54,6 +54,21 @@ class LocationTrailService : Service() {
     }
     private lateinit var visitPreferences: VisitPreferences
     private var bootId: Int = -1
+    private val languageListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        refreshLanguage()
+    }
+
+    private fun refreshLanguage() {
+        workerHandler.post {
+            TrackingNotification.ensureChannel(this)
+            refreshNotification(force = true)
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        refreshLanguage()
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -67,6 +82,7 @@ class LocationTrailService : Service() {
         worker.start()
         workerHandler = Handler(worker.looper)
         TrackingNotification.ensureChannel(this)
+        getSharedPreferences("language", MODE_PRIVATE).registerOnSharedPreferenceChangeListener(languageListener)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -88,6 +104,7 @@ class LocationTrailService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        getSharedPreferences("language", MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(languageListener)
         running = false
         workerHandler.removeCallbacksAndMessages(null)
         stopTracking()
@@ -298,7 +315,7 @@ class LocationTrailService : Service() {
         lastNotificationRefreshMs = nowMs
         val text = notificationText(nowMs)
         synchronized(notificationLock) {
-            if (text == lastNotificationText || !running) return
+            if ((!force && text == lastNotificationText) || !running) return
             lastNotificationText = text
             getSystemService(NotificationManager::class.java).notify(TrackingNotification.Id, TrackingNotification.create(this, text))
         }

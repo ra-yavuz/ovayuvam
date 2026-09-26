@@ -32,6 +32,8 @@ class ReleaseChecks : Instrumentation() {
     private var exploreScene = false
     private var reviewCandidate = false
     private var discoveries = false
+    private var worldControls = false
+    private var notificationLanguages = false
     private fun checkExploreScene() {
         check(targetContext.packageName.endsWith(".verification"))
         TrackingState(targetContext).acceptDisclosure()
@@ -100,12 +102,26 @@ class ReleaseChecks : Instrumentation() {
         exploreScene = arguments?.getString("exploreScene") == "true"
         reviewCandidate = arguments?.getString("reviewCandidate") == "true"
         discoveries = arguments?.getString("discoveries") == "true"
+        worldControls = arguments?.getString("worldControls") == "true"
+        notificationLanguages = arguments?.getString("notificationLanguages") == "true"
         super.onCreate(arguments)
         start()
     }
     override fun onStart() {
         val result = Bundle()
         try {
+            if (notificationLanguages) {
+                checkNotificationLanguages()
+                result.putString("stream", "PASS: running tracking notification title, body, pause action and channel update in six languages without alerts\n")
+                finish(-1, result)
+                return
+            }
+            if (worldControls) {
+                checkWorldControls()
+                result.putString("stream", "PASS: persistent badge, six languages, transparent pen, credits timer, one-finger paint, two-finger pan and zoom, help and real map sharing\n")
+                finish(-1, result)
+                return
+            }
             if (discoveries) {
                 checkDiscoveries()
                 result.putString("stream", "PASS: fresh discoveries, midnight reset, tile reuse, geographic area union and overlap\n")

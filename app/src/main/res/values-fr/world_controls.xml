@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="area_total">"Total : ≈ %1$s m²"</string>
+    <string name="area_today">"Aujourd’hui : ≈ %1$s m²"</string>
+    <string name="show_logo">"Afficher le logo ovayuvam"</string>
+    <string name="show_area">"Afficher la surface explorée"</string>
+    <string name="about_setting">"À propos de %1$s"</string>
+    <string name="map_credits">"Crédits de la carte"</string>
+    <string name="share_world">"Partager mon monde"</string>
+    <string name="share_text">"Mon monde dans ovayuvam, une appli gratuite qui révèle les lieux que j’explore. %1$s"</string>
+    <string name="share_failed">"Impossible de partager la carte. Réessaie."</string>
+    <string name="help_share">"Partage une image de la carte à sa position et à son niveau de zoom actuels, avec un lien vers ovayuvam. Le brouillard reste sur l’image. Vérifie d’abord la carte : tes découvertes et ta position peuvent révéler où tu habites ou passes du temps. Rien n’est envoyé avant de choisir un destinataire dans Android."</string>
+    <string name="help_tracking">"Enregistre ta position pour dissiper le brouillard en te déplaçant, même avec l’écran éteint. Ton monde reste sur ce téléphone. Tu peux mettre en pause ici ou dans la notification permanente ; tes découvertes sont conservées. Android doit autoriser l’accès à la position."</string>
+    <string name="help_growth">"Revois la façon dont ton monde a grandi. La vue commence autour de tes premières découvertes et s’élargit quand tu explores plus loin. Choisis une période, mets en pause ou déplace la frise chronologique. La lecture ne modifie pas ton monde enregistré."</string>
+    <string name="help_fog">"Choisis à quel point le brouillard cache les lieux non visités. Une faible opacité rend les chemins plus visibles ; une forte opacité cache davantage de détails. Le brouillard ne peut pas être entièrement supprimé. Ce réglage ne change ni tes découvertes ni tes chemins dessinés."</string>
+    <string name="help_visits">"Quand tu dézoomes pour voir plusieurs pâtés de maisons ou plus, des couleurs translucides indiquent à quelle fréquence tu reviens dans une zone. Plus de visites donnent des couleurs plus intenses. Rester immobile, les écarts du GPS et les déplacements dans une même zone de séjour ne comptent pas comme de nouvelles visites. Zoome pour retrouver la carte habituelle."</string>
+    <string name="help_weekly">"Après environ une heure dans une zone, ovayuvam peut suggérer une rue ou un chemin inexploré à moins de 500 mètres. Une seule suggestion peut apparaître par semaine et expire après trois jours. Les suggestions dépendent des données cartographiques disponibles. Vérifie les panneaux et les règles d’accès ; un repère ne garantit pas un itinéraire sûr ou accessible."</string>
+    <string name="help_world">"Tes découvertes, visites et chemins dessinés sont enregistrés sur ce téléphone. Exporte une sauvegarde chiffrée avant de réinstaller l’appli ou de changer de téléphone. Conserve le fichier et sa phrase secrète. Une image partagée de la carte n’est pas une sauvegarde."</string>
+    <string name="help_export">"Enregistre une copie chiffrée de ton monde avec le sélecteur de fichiers Android. Tu peux choisir le stockage local ou un espace cloud connecté. Choisis une phrase secrète et garde-la précieusement ; elle ne peut pas être récupérée."</string>
+    <string name="help_import">"Choisis une sauvegarde originale d’ovayuvam et saisis sa phrase secrète. Les découvertes importées sont fusionnées avec ton monde actuel, sans l’effacer. Un fichier stocké dans le cloud doit être disponible au téléchargement."</string>
+    <string name="help_language">"Langue du téléphone suit les réglages Android. L’appli et ses notifications sont disponibles en anglais, allemand, turc, russe, espagnol et français. Tu peux aussi choisir une langue ici. Les autres langues du téléphone utilisent l’anglais."</string>
+    <string name="help_privacy">"Découvre comment sont traités la position, les téléchargements de cartes et les sauvegardes chiffrées. Ton monde est stocké localement. Le partage transmet seulement l’image et le texte à l’appli choisie, pas la base de données de ton monde."</string>
+</resources>

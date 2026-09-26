@@ -19,6 +19,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -31,6 +34,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import tr.ovayuva.ovayuvam.ui.AppLanguage
 import tr.ovayuva.ovayuvam.ui.WorldSettings
+import tr.ovayuva.ovayuvam.ui.WorldBadge
+import tr.ovayuva.ovayuvam.ui.MapCredits
+import tr.ovayuva.ovayuvam.ui.ShareWorld
 import tr.ovayuva.ovayuvam.ui.TrackingWelcome
 import tr.ovayuva.ovayuvam.domain.PlannedPath
 import tr.ovayuva.ovayuvam.domain.PathBrush
@@ -54,6 +60,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -218,6 +225,8 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     val visitPreferences = remember { VisitPreferences(context) }
     var showHeat by remember { mutableStateOf(visitPreferences.showHeat) }
     val appearance = remember { MapPreferences(context) }
+    var showArea by remember { mutableStateOf(appearance.showArea) }
+    var sharing by remember { mutableStateOf(false) }
     var fogOpacity by remember { mutableFloatStateOf(appearance.fogOpacity) }
     var welcome by rememberSaveable { mutableStateOf(!trackingState.consented) }
     var trackingEnabled by remember { mutableStateOf(trackingState.enabled) }
@@ -233,7 +242,9 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     val revealCells = worldData.reveal
     val visits = worldData.visits
     val areaCounter = remember { RevealedArea() }
+    val olderAreaCounter = remember { RevealedArea() }
     var revealedArea by remember { mutableDoubleStateOf(0.0) }
+    var todayArea by remember { mutableDoubleStateOf(0.0) }
     var today by remember { mutableStateOf(DiscoveryDay.at()) }
     var currentCell by remember { mutableStateOf(trackingState.currentCell()) }
     var currentPosition by remember { mutableStateOf(trackingState.currentPosition()) }
@@ -253,8 +264,14 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     var growth by remember { mutableStateOf<WorldGrowth?>(null) }
     var replayPanelHeightPx by remember { mutableIntStateOf(0) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(cells, revealCells) {
-        revealedArea = withContext(Dispatchers.Default) { areaCounter.update(cells, revealCells) }
+    LaunchedEffect(cells, revealCells, today) {
+        val areas = withContext(Dispatchers.Default) {
+            val total = areaCounter.update(cells, revealCells)
+            val older = olderAreaCounter.update(cells, revealCells, excludeDay = today)
+            total to (total - older).coerceIn(0.0, total)
+        }
+        revealedArea = areas.first
+        todayArea = areas.second
     }
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -423,6 +440,26 @@ private fun OvayuvamScreen(repository: VisitRepository) {
 
     if (infoOpen) {
         WorldSettings(
+            onShare = {
+                if (!sharing) {
+                    infoOpen = false
+                    sharing = true
+                    following = false
+                    scope.launch {
+                        try {
+                            // Let the sheet leave and the expanded map credits reach the window.
+                            delay(450)
+                            androidx.compose.runtime.withFrameNanos { }
+                            val activity = context as android.app.Activity
+                            val intent = ShareWorld.intent(context, ShareWorld.capture(activity))
+                            context.startActivity(Intent.createChooser(intent, resources.getString(R.string.share_world)))
+                        } catch (error: CancellationException) { throw error
+                        } catch (error: Exception) {
+                            status = resources.getString(R.string.share_failed)
+                        } finally { sharing = false }
+                    }
+                }
+            },
             onReplay = {
                 infoOpen = false
                 replayPeriod = GrowthPeriod.All
@@ -534,20 +571,9 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 .padding(start = 12.dp, top = 12.dp, end = 84.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            BrandPill()
-            if (revealedArea > 0 && !replayOpen) {
-                val locale = resources.configuration.locales[0]
-                val number = remember(revealedArea, locale) {
-                    java.text.NumberFormat.getIntegerInstance(locale).format(revealedArea.toLong())
-                }
-                Surface(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                    shape = MaterialTheme.shapes.small, modifier = Modifier.widthIn(max = 260.dp)) {
-                    Text(stringResource(R.string.revealed_area, number),
-                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary)
-                }
-            }
+            WorldBadge(revealedArea, todayArea, showArea,
+                onPinned = { showArea = it; appearance.showArea = it },
+                previewsEnabled = !replayOpen && !planning && !infoOpen && !sharing && revealedArea > 0)
         }
 
         MapIconButton(
@@ -620,7 +646,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 TextButton(onClick = { replayOpen = false }) { Text(stringResource(R.string.cancel)) }
             }
             Spacer(Modifier.height(8.dp))
-            AttributionPill()
+            MapCredits(forceExpanded = sharing)
         } else Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -632,38 +658,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                     else resources.getString(if (!trackingEnabled) R.string.tracking_paused else R.string.finding_location))
                 Spacer(Modifier.height(8.dp))
             }
-            AttributionPill()
-        }
-    }
-}
-
-@Composable
-private fun BrandPill(modifier: Modifier = Modifier) {
-    Surface(
-        color = Color.Transparent,
-        modifier = modifier.sketchSurface(
-            fill = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-            border = MaterialTheme.colorScheme.outline,
-            seed = 17,
-        ),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.launcher_map_foreground),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "ovayuvam",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-            )
+            MapCredits(forceExpanded = sharing)
         }
     }
 }
@@ -688,25 +683,6 @@ private fun StatusPill(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun AttributionPill(modifier: Modifier = Modifier) {
-    Surface(
-        color = Color.Transparent,
-        modifier = modifier.sketchSurface(
-            fill = Ink.copy(alpha = 0.82f),
-            border = Color.White.copy(alpha = 0.42f),
-            seed = 302,
-        ),
-    ) {
-        Text(
-            text = BasemapStyle.Attribution,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White,
-        )
-    }
-}
-
-@Composable
 private fun MapIconButton(
     icon: Int,
     label: String,
@@ -722,18 +698,24 @@ private fun MapIconButton(
             .size(52.dp)
             .semantics { contentDescription = label }
             .sketchSurface(
-                fill = MaterialTheme.colorScheme.surface.copy(alpha = if (enabled) 0.95f else 0.62f),
-                border = MaterialTheme.colorScheme.outline,
+                fill = if (icon == R.drawable.art_pen) Color.Transparent else MaterialTheme.colorScheme.surface.copy(alpha = if (enabled) 0.95f else 0.62f),
+                border = if (icon == R.drawable.art_pen) Color.Transparent else MaterialTheme.colorScheme.outline,
                 seed = label.hashCode(),
             ),
     ) {
         Box(contentAlignment = Alignment.Center) {
+            if (icon == R.drawable.art_pen) {
+                // A thin icon-shaped edge stays legible over both dark fog and clear map tiles.
+                for ((x, y) in listOf(-1 to -1, -1 to 1, 1 to -1, 1 to 1)) Image(
+                    painterResource(icon), null, Modifier.size(44.dp).offset(x.dp, y.dp),
+                    colorFilter = ColorFilter.tint(Ink))
+            }
             Image(
                 painter = painterResource(icon),
                 contentDescription = label,
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(if (icon == R.drawable.art_pen) 44.dp else 34.dp),
                 alpha = if (enabled) 1f else 0.42f,
-                colorFilter = if (icon == R.drawable.art_pen) null else ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
+                colorFilter = ColorFilter.tint(if (icon == R.drawable.art_pen) Paper else MaterialTheme.colorScheme.onSurface),
             )
         }
     }
@@ -955,27 +937,43 @@ private fun FogWorldMap(
             awaitEachGesture {
                 val first = awaitFirstDown(requireUnconsumed = false)
                 first.consume()
-                if (map.cameraPosition.zoom < 14) {
-                    latestPlanZoom()
-                    return@awaitEachGesture
-                }
                 fun position(point: Offset): GeoPosition {
                     val geo = map.projection.fromScreenLocation(android.graphics.PointF(point.x, point.y))
                     return GeoPosition(geo.latitude, geo.longitude)
                 }
                 val cells = linkedSetOf<WorldCell>()
                 var previous = position(first.position)
-                cells.addAll(PathBrush.segment(previous, previous))
+                val canPaint = map.cameraPosition.zoom >= 14
+                if (canPaint) cells.addAll(PathBrush.segment(previous, previous))
                 draft = cells.toList()
-                var cancelled = false
+                var cancelled = !canPaint
+                var navigated = false
                 try {
                     do {
                         val event = awaitPointerEvent()
-                        if (event.changes.count { it.pressed } > 1) cancelled = true
+                        if (event.changes.count { it.pressed } > 1) {
+                            cancelled = true
+                            navigated = true
+                            draft = emptyList()
+                            // Once a second finger joins, this entire gesture is navigation only.
+                            if (event.changes.count { it.pressed && it.previousPressed } > 1) {
+                                val zoom = event.calculateZoom()
+                                val focus = event.calculateCentroid(useCurrent = false)
+                                val pan = event.calculatePan()
+                                if (zoom.isFinite() && zoom > 0) {
+                                    map.moveCamera(CameraUpdateFactory.zoomBy(kotlin.math.log2(zoom.toDouble()),
+                                        android.graphics.Point(focus.x.roundToInt(), focus.y.roundToInt())))
+                                    val target = map.projection.fromScreenLocation(android.graphics.PointF(
+                                        mapSize.width / 2f - pan.x, mapSize.height / 2f - pan.y))
+                                    map.moveCamera(CameraUpdateFactory.newLatLng(target))
+                                    latestUserMovedMap()
+                                }
+                            }
+                        }
                         val change = event.changes.firstOrNull { it.id == first.id }
                         event.changes.forEach { it.consume() }
-                        if (change == null || !change.pressed) break
-                        if (!cancelled) {
+                        if (!event.changes.any { it.pressed }) break
+                        if (!cancelled && change != null && change.pressed) {
                             val next = position(change.position)
                             cells.addAll(PathBrush.segment(previous, next))
                             previous = next
@@ -983,6 +981,7 @@ private fun FogWorldMap(
                         }
                     } while (true)
                     if (!cancelled && cells.isNotEmpty()) latestPath(cells.toList())
+                    if (!canPaint && !navigated) latestPlanZoom()
                 } finally { draft = emptyList() }
             }
         })

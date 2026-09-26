@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="area_total">"Total: ≈ %1$s m²"</string>
+    <string name="area_today">"Today: ≈ %1$s m²"</string>
+    <string name="show_logo">"Show ovayuvam logo"</string>
+    <string name="show_area">"Show explored area"</string>
+    <string name="about_setting">"About %1$s"</string>
+    <string name="map_credits">"Map credits"</string>
+    <string name="share_world">"Share my world"</string>
+    <string name="share_text">"My world in ovayuvam, a free app that reveals the places I explore. %1$s"</string>
+    <string name="share_failed">"Could not share the map. Please try again."</string>
+    <string name="help_share">"Share an image of the map at its current position and zoom, with a link to ovayuvam. The fog stays in the image. Check the map first: your discoveries and location may reveal where you live or spend time. Nothing is sent until you choose a recipient in Android."</string>
+    <string name="help_tracking">"Record your location to clear the fog as you move, including while the screen is off. Your world stays on this phone. Pause here or in the ongoing notification; existing discoveries are kept. Location access must be allowed in Android."</string>
+    <string name="help_growth">"Replay how your world has grown. The view starts around your first discoveries and widens as you explore farther. Choose a time range, pause, or move the timeline. Replaying does not change your saved world."</string>
+    <string name="help_fog">"Choose how strongly the fog hides places you have not visited. Lower opacity makes paths easier to see; higher opacity hides more detail. It cannot fully clear the fog. This does not change your discoveries or painted plans."</string>
+    <string name="help_visits">"When you zoom out to several blocks or farther, translucent colors show how often you return to an area. More visits mean stronger colors. Standing still, GPS drift and moving around within a stay area do not count as new visits. Zoom in to return to the usual map."</string>
+    <string name="help_weekly">"After about an hour in one area, ovayuvam can suggest an unexplored street or path within 500 metres. At most one suggestion appears each week and expires after three days. Suggestions depend on available map data. Check signs and access rules; a pin does not guarantee a safe or accessible route."</string>
+    <string name="help_world">"Your discoveries, visit history and painted plans are saved on this phone. Export an encrypted backup before reinstalling or changing phones. Keep both the file and its passphrase. Sharing a map image is not a backup."</string>
+    <string name="help_export">"Save an encrypted copy of your world using Android’s file picker. You can choose local storage or a connected cloud drive. Choose a passphrase and keep it safe; it cannot be recovered."</string>
+    <string name="help_import">"Choose an original ovayuvam backup and enter its passphrase. Imported discoveries are merged with your existing world, not used to erase it. If the file is on a cloud drive, it must be available to download."</string>
+    <string name="help_language">"Phone language follows your Android language settings. English, German, Turkish, Russian, Spanish and French are supported for the app and its notifications. You can also choose one here. Other phone languages use English."</string>
+    <string name="help_privacy">"Read how location, map downloads and encrypted backups are handled. Your world is stored locally. Sharing an image sends only the image and text to the app you choose, not your world database."</string>
+</resources>

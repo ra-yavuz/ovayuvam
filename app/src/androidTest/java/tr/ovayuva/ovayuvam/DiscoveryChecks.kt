@@ -57,4 +57,17 @@ fun checkDiscoveries() = runBlocking {
     check(area.update(listOf(legacy), emptyList()) > 0)
     check(area.update(emptyList(), emptyList()) < 0.01)
     check(cache.bytes <= 32 * 1024 * 1024)
+    val totalCounter = RevealedArea()
+    val oldCounter = RevealedArea()
+    val old = current.copy(x = current.x + 1, firstSeenMs = 900)
+    val world = listOf(old, current)
+    val total = totalCounter.update(emptyList(), world)
+    val oldOnly = oldCounter.update(emptyList(), world, day)
+    check(total - oldOnly in 1.0..first) { "Today counted overlapping old ground" }
+    val beforeRenders = oldCounter.renderedTiles
+    check(oldCounter.update(emptyList(), world.map { it.copy(samples = 800, lastSeenMs = 99_999) }, day) == oldOnly)
+    check(oldCounter.renderedTiles == beforeRenders)
+    check(abs(oldCounter.update(emptyList(), world, DiscoveryDay(100_000, 200_000)) - total) < 0.01)
+    check(oldCounter.update(emptyList(), listOf(current.copy(firstSeenMs = 0)), day) > 0) { "Unknown dates counted as today" }
+    check(oldCounter.update(listOf(legacy.copy(firstSeenMs = 2_000)), emptyList(), day) == 0.0)
 }
