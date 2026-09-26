@@ -3,6 +3,8 @@ package tr.ovayuva.ovayuvam.backup
 import org.json.JSONArray
 import org.json.JSONObject
 import tr.ovayuva.ovayuvam.domain.GeoPosition
+import tr.ovayuva.ovayuvam.domain.PlannedPath
+import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.VisitedCell
 import tr.ovayuva.ovayuvam.location.GoalPin
@@ -21,6 +23,7 @@ data class WorldBackup(
     val goal: GoalPin?,
     val exportedMs: Long = System.currentTimeMillis(),
     val visitCounts: List<VisitCount> = emptyList(),
+    val plannedPaths: List<PlannedPath> = emptyList(),
 )
 
 object WorldBackupCodec {
@@ -104,6 +107,12 @@ object WorldBackupCodec {
         return JSONObject()
             .put("format", PlainFormat)
             .put("exportedMs", backup.exportedMs)
+            .put("plannedPaths", JSONArray().apply {
+                backup.plannedPaths.forEach { path -> put(JSONObject().put("id", path.id)
+                    .put("createdMs", path.createdMs).put("cells", JSONArray().apply {
+                        path.cells.forEach { cell -> put(JSONArray().put(cell.x).put(cell.y)) }
+                    })) }
+            })
             .put("visitedCells", visited)
             .put("revealCells", reveal)
             .put("visitCounts", JSONArray().apply {
@@ -162,6 +171,20 @@ object WorldBackupCodec {
             revealCells = reveal,
             goal = goal,
             exportedMs = root.getLong("exportedMs"),
+            plannedPaths = root.optJSONArray("plannedPaths")?.let { paths ->
+                require(paths.length() <= PlannedPath.MaxCells)
+                var total = 0
+                List(paths.length()) { i ->
+                    val path = paths.getJSONObject(i)
+                    val points = path.getJSONArray("cells")
+                    total += points.length()
+                    require(total <= PlannedPath.MaxCells)
+                    PlannedPath(path.getString("id"), path.getLong("createdMs"), List(points.length()) { j ->
+                        val point = points.getJSONArray(j)
+                        WorldCell(point.getInt(0), point.getInt(1))
+                    })
+                }
+            } ?: emptyList(),
             visitCounts = root.optJSONArray("visitCounts")?.let { counts ->
                 List(counts.length()) { index ->
                     val item = counts.getJSONObject(index)

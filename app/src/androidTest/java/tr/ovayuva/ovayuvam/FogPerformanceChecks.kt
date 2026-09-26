@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit
 fun Instrumentation.checkFogPerformance(label: String) {
     check(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk"))
     val output = File(targetContext.filesDir,"fog-performance").apply { mkdirs() }
+    tr.ovayuva.ovayuvam.location.TrackingState(targetContext).acceptDisclosure()
+    tr.ovayuva.ovayuvam.location.TrackingState(targetContext).setEnabled(false)
     val activity = startActivitySync(Intent(targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     fun find(view: View): MapView? {
         if (view is MapView) return view

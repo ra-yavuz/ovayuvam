@@ -25,14 +25,19 @@ object TrackingNotification {
     }
 
     fun create(context: Context, text: String): Notification {
+        val localized = tr.ovayuva.ovayuvam.ui.AppLanguage.wrap(context)
         val openIntent = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return NotificationCompat.Builder(context, ChannelId)
             .setSmallIcon(R.drawable.ic_stat_map)
-            .setContentTitle(context.getString(R.string.tracking_notification_title))
+            .setContentTitle(localized.getString(R.string.tracking_notification_title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(openIntent)
+            .addAction(android.R.drawable.ic_media_pause, localized.getString(R.string.pause_tracking),
+                PendingIntent.getService(context, 1,
+                    Intent(context, LocationTrailService::class.java).setAction(LocationTrailService.ActionPause),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)

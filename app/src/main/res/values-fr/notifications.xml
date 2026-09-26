@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="notification_everyday">
+        <item>"Une petite carte, tout un monde."</item>
+        <item>"Ton coin du monde se dessine jour après jour."</item>
+        <item>"Quelques pas suffisent à tracer un petit chemin."</item>
+        <item>"Les journées ordinaires ont aussi leur place ici."</item>
+        <item>"Ton monde n’a pas de date limite."</item>
+        <item>"Une rue familière peut toujours être jolie."</item>
+        <item>"Les espaces vides deviennent des souvenirs avec le temps."</item>
+        <item>"Certaines aventures tiennent entre la maison et la boulangerie."</item>
+        <item>"Ta carte ressemble à un album de souvenirs."</item>
+        <item>"Un petit monde peut contenir beaucoup de souvenirs."</item>
+        <item>"Toute carte commence quelque part."</item>
+        <item>"Pas de ligne d’arrivée, juste ton propre monde."</item>
+        <item>"Le brouillard peut attendre. Profite de ta journée."</item>
+        <item>"Une aventure n’a pas besoin d’être grande."</item>
+        <item>"Un coin familier sous un ciel différent."</item>
+        <item>"Ta carte a de la place pour un joli détour."</item>
+        <item>"Beaucoup de beaux endroits sont tout à fait ordinaires."</item>
+        <item>"Un peu de curiosité peut mener loin."</item>
+        <item>"Ton monde n’a pas besoin de public."</item>
+        <item>"Le meilleur rythme, c’est le tien."</item>
+        <item>"Une collection de lieux qui tient dans la poche."</item>
+        <item>"Les grandes cartes se font de petits moments."</item>
+        <item>"Les trajets du quotidien font aussi partie de ton histoire."</item>
+        <item>"Une carte n’a pas besoin d’être terminée pour être belle."</item>
+    </string-array>
+    <string-array name="notification_progress">
+        <item>"Quelques pas de plus dans ton petit atlas."</item>
+        <item>"Ta promenade du quotidien a sa place sur la carte."</item>
+        <item>"Une petite sortie fait désormais partie de ton monde."</item>
+        <item>"Un morceau d’aujourd’hui est resté sur la carte."</item>
+        <item>"Les petits pas dessinent aussi de jolis chemins."</item>
+        <item>"Un peu de ton quotidien, gardé pour toi."</item>
+        <item>"Tes lieux familiers ont de la compagnie."</item>
+        <item>"Un petit chemin dans un très grand monde."</item>
+        <item>"Ton monde grandit aussi les jours ordinaires."</item>
+        <item>"Certaines promenades tiennent dans une pause déjeuner."</item>
+        <item>"Quelques pas qui n’appartiennent qu’à toi."</item>
+        <item>"Un peu plus de ta journée sur la carte."</item>
+    </string-array>
+    <string-array name="notification_quiet">
+        <item>"Ton monde sera là quand tu reviendras."</item>
+        <item>"Rien à rattraper. Ta carte est toujours la tienne."</item>
+        <item>"Une journée tranquille est aussi une bonne journée."</item>
+        <item>"Le brouillard peut attendre demain."</item>
+        <item>"Aucune série perdue, aucune urgence."</item>
+        <item>"Tes découvertes restent là où tu les as laissées."</item>
+        <item>"Le repos fait aussi partie de l’aventure."</item>
+        <item>"Il y aura du temps pour une autre promenade."</item>
+        <item>"Ta carte ne fait pas l’appel."</item>
+        <item>"Une pause n’efface pas le chemin parcouru."</item>
+    </string-array>
+</resources>

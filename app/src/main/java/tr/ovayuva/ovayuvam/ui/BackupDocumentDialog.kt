@@ -24,6 +24,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
+import tr.ovayuva.ovayuvam.R
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
@@ -47,7 +50,8 @@ fun BackupDocumentDialog(
     onImported: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current.applicationContext
+    val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     // Secrets stay in memory. A recreated activity asks again after restoring the selected URI.
     var passphrase by remember(uri) { mutableStateOf("") }
@@ -60,24 +64,23 @@ fun BackupDocumentDialog(
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         properties = DialogProperties(dismissOnBackPress = !busy, dismissOnClickOutside = !busy),
-        title = { Text(if (importing) "Import world" else "Export world") },
+        title = { Text(stringResource(if (importing) R.string.import_world else R.string.export_world)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (result != null) {
                     Text(result!!)
                 } else {
-                    Text(if (importing) "Enter the passphrase used when this backup was exported. Your existing discoveries will be kept."
-                        else "Choose a passphrase for this backup. Keep it somewhere safe; it cannot be recovered.")
+                    Text(stringResource(if (importing) R.string.backup_import_help else R.string.backup_export_help))
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = passphrase,
                         onValueChange = { passphrase = it; error = null },
                         enabled = !busy,
-                        label = { Text("Backup passphrase") },
+                        label = { Text(stringResource(R.string.passphrase)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
-                        supportingText = { Text("At least ${WorldBackupCodec.MinPassphraseLength} characters") },
+                        supportingText = { Text(stringResource(R.string.passphrase_length, WorldBackupCodec.MinPassphraseLength)) },
                         visualTransformation = if (showPassphrase) VisualTransformation.None else PasswordVisualTransformation(),
                     )
                     if (!importing) {
@@ -86,7 +89,7 @@ fun BackupDocumentDialog(
                             value = confirmation,
                             onValueChange = { confirmation = it },
                             enabled = !busy,
-                            label = { Text("Confirm passphrase") },
+                            label = { Text(stringResource(R.string.confirm_passphrase)) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
@@ -95,19 +98,19 @@ fun BackupDocumentDialog(
                     }
                     Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Checkbox(checked = showPassphrase, onCheckedChange = { showPassphrase = it }, enabled = !busy)
-                        Text("Show passphrase")
+                        Text(stringResource(R.string.show_passphrase))
                     }
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     if (busy) {
                         LinearProgressIndicator(Modifier.fillMaxWidth())
                         Spacer(Modifier.height(8.dp))
-                        Text(if (importing) "Importing your world..." else "Saving your encrypted world...")
+                        Text(stringResource(if (importing) R.string.importing_world else R.string.saving_world))
                     }
                 }
             }
         },
         confirmButton = {
-            if (result != null) TextButton(onClick = onDismiss) { Text("Done") }
+            if (result != null) TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) }
             else TextButton(enabled = valid && !busy, onClick = {
                 busy = true
                 error = null
@@ -121,16 +124,16 @@ fun BackupDocumentDialog(
                                 val backup = resolver.openInputStream(uri)?.use {
                                     WorldBackupCodec.decrypt(BackupFiles.read(it), secret)
                                 } ?: throw java.io.FileNotFoundException()
-                                repository.importCells(backup.visitedCells, backup.revealCells, backup.visitCounts)
+                                repository.importCells(backup.visitedCells, backup.revealCells, backup.visitCounts, backup.plannedPaths)
                                 backup.goal?.let { goals.setGoal(it.position, it.createdMs) }
-                                "World imported: ${backup.visitedCells.size} visited cells, ${backup.revealCells.size} reveal cells, and ${backup.visitCounts.size} visit records. Existing discoveries were kept."
+                                resources.getString(R.string.import_success)
                             } else {
                                 val backup = WorldBackup(repository.allVisitedCells(), repository.allRevealCells(),
-                                    goals.goal(), visitCounts = repository.allVisitCounts())
+                                    goals.goal(), visitCounts = repository.allVisitCounts(), plannedPaths = repository.plannedPaths())
                                 val bytes = WorldBackupCodec.encrypt(backup, secret)
                                 resolver.openOutputStream(uri, "wt")?.use { it.write(bytes); it.flush() }
                                     ?: throw java.io.FileNotFoundException()
-                                "Encrypted world saved. Keep this file and its passphrase before reinstalling."
+                                resources.getString(R.string.export_success)
                             }
                         }
                         if (importing) onImported()
@@ -140,15 +143,22 @@ fun BackupDocumentDialog(
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (failure: Exception) {
-                        error = BackupFiles.errorMessage(failure)
+                        error = resources.getString(when (failure) {
+                            is javax.crypto.AEADBadTagException -> R.string.backup_bad_password
+                            is SecurityException -> R.string.backup_access
+                            is java.io.FileNotFoundException -> R.string.backup_unavailable
+                            is java.io.IOException -> R.string.backup_io
+                            is org.json.JSONException, is IllegalArgumentException -> R.string.backup_invalid
+                            else -> R.string.backup_failure
+                        })
                     } finally {
                         busy = false
                     }
                 }
-            }) { Text(if (importing) "Import" else "Save backup") }
+            }) { Text(stringResource(if (importing) R.string.import_label else R.string.save_backup)) }
         },
         dismissButton = {
-            if (result == null) TextButton(enabled = !busy, onClick = onDismiss) { Text("Cancel") }
+            if (result == null) TextButton(enabled = !busy, onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 }

@@ -20,8 +20,8 @@ android {
         applicationId = "tr.ovayuva.ovayuvam"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28
-        versionName = "0.8.0"
+        versionCode = 30
+        versionName = "0.9.1"
 
         testInstrumentationRunner = "tr.ovayuva.ovayuvam.ReleaseChecks"
     }
@@ -65,8 +65,12 @@ android {
         buildConfig = true
     }
 
+    // The offline language picker must work without downloading another split.
+    bundle { language { enableSplit = false } }
+
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.all { it.jvmArgs("-XX:ActiveProcessorCount=1"); it.maxHeapSize = "512m" }
     }
     testBuildType = "verification"
 }

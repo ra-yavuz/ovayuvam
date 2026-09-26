@@ -12,6 +12,11 @@ data class TrackingNotificationStats(
     val nowMs: Long,
 )
 
+data class NotificationCopy(val everyday: List<String>, val progress: List<String>, val quiet: List<String>,
+    val area: String, val distance: String, val small: String, val locale: Locale) {
+    init { require(everyday.isNotEmpty() && progress.isNotEmpty() && quiet.isNotEmpty()) }
+}
+
 object TrackingNotificationText {
     private const val InactiveDays = 3L
     private const val DayMs = 24L * 60L * 60L * 1_000L
@@ -114,7 +119,11 @@ object TrackingNotificationText {
     private fun pick(messages: List<String>, nowMs: Long): String =
         messages[Math.floorMod(Math.floorDiv(nowMs, RotationMs), messages.size.toLong()).toInt()]
 
-    fun text(stats: TrackingNotificationStats, zoneId: ZoneId = ZoneId.systemDefault()): String {
+    fun text(stats: TrackingNotificationStats, zoneId: ZoneId = ZoneId.systemDefault(), copy: NotificationCopy? = null): String {
+        val everyday = copy?.everyday ?: everyday
+        val progress = copy?.progress ?: progress
+        val quiet = copy?.quiet ?: quiet
+        val locale = copy?.locale ?: Locale.US
         val daysSinceProgress = stats.lastProgressMs?.let { (stats.nowMs - it).coerceAtLeast(0L) / DayMs }
         if (daysSinceProgress != null && daysSinceProgress >= InactiveDays) {
             return pick(quiet, stats.nowMs)
@@ -122,22 +131,25 @@ object TrackingNotificationText {
         val hour = Instant.ofEpochMilli(stats.nowMs).atZone(zoneId).hour
         if (hour >= 19 && stats.hasProgressToday) {
             val summary = if (stats.todayRevealedSquareMeters >= MinimumAreaForNotificationSquareMeters) {
-                "Today you revealed about ${formatSquareMeters(stats.todayRevealedSquareMeters)} of your map."
-            } else if (stats.todayDistanceMeters >= 1_000f) {
-                "Today you walked about ${formatDistance(stats.todayDistanceMeters)} through the fog."
+                val area = formatSquareMeters(stats.todayRevealedSquareMeters, locale)
+                copy?.area?.format(locale, area) ?: "Today you revealed about $area of your map."
             } else if (stats.todayDistanceMeters >= 100f) {
-                "Today you walked about ${formatDistance(stats.todayDistanceMeters)} through the fog."
+                val distance = formatDistance(stats.todayDistanceMeters, locale)
+                copy?.distance?.format(locale, distance) ?: "Today you walked about $distance through the fog."
             } else {
-                "A little more of your world is visible today."
+                copy?.small ?: "A little more of your world is visible today."
             }
             return "$summary\n${pick(everyday, stats.nowMs)}"
         }
         return pick(if (stats.hasProgressToday) progress else everyday, stats.nowMs)
     }
 
-    private fun formatDistance(meters: Float): String =
+    private fun formatDistance(meters: Float, locale: Locale): String =
         if (meters >= 1_000f) {
-            "${oneDecimal(meters.toDouble() / 1_000.0)} km"
+            "${java.text.NumberFormat.getNumberInstance(locale).apply {
+                maximumFractionDigits = 1
+                roundingMode = java.math.RoundingMode.HALF_UP
+            }.format((meters / 100.0).roundToInt() / 10.0)} km"
         } else {
             "${meters.roundToInt()} m"
         }
@@ -147,13 +159,13 @@ object TrackingNotificationText {
         return if (rounded % 1.0 == 0.0) rounded.toInt().toString() else rounded.toString()
     }
 
-    private fun formatSquareMeters(squareMeters: Int): String {
+    private fun formatSquareMeters(squareMeters: Int, locale: Locale): String {
         val rounded = if (squareMeters >= 1_000) {
             ((squareMeters + 50) / 100) * 100
         } else {
             squareMeters
         }
-        return "%,d m²".format(Locale.US, rounded)
+        return "%,d m²".format(locale, rounded)
     }
 
     private val TrackingNotificationStats.hasProgressToday: Boolean

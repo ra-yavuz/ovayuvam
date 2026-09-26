@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import tr.ovayuva.ovayuvam.domain.PlannedPath
 import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.VisitedCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
@@ -25,6 +26,32 @@ class VisitRepository(context: Context) {
     private var lastVisitFix: VisitFix? = null
 
     fun close() = db.close()
+
+    fun plannedPaths(): List<PlannedPath> = db.readableDatabase.rawQuery(
+        "SELECT id,created_ms,cell_x,cell_y FROM planned_paths ORDER BY created_ms,id,cell_x,cell_y", null).use { cursor ->
+        val cells = linkedMapOf<Pair<String, Long>, MutableList<WorldCell>>()
+        while (cursor.moveToNext()) cells.getOrPut(cursor.getString(0) to cursor.getLong(1)) { mutableListOf() }
+            .add(WorldCell(cursor.getInt(2), cursor.getInt(3)))
+        cells.map { (key, points) -> PlannedPath(key.first, key.second, points) }
+    }
+
+    fun savePlannedPaths(paths: List<PlannedPath>) {
+        db.writableDatabase.transaction {
+            paths.forEach { path -> path.cells.forEach { cell ->
+                execSQL("INSERT OR IGNORE INTO planned_paths(id,created_ms,cell_x,cell_y) VALUES(?,?,?,?)",
+                    arrayOf<Any>(path.id, path.createdMs, cell.x, cell.y))
+            } }
+            rawQuery("SELECT COUNT(*) FROM planned_paths", null).use {
+                it.moveToFirst(); require(it.getLong(0) <= PlannedPath.MaxCells) { "Too many planned paths." }
+            }
+        }
+    }
+
+    fun undoPlannedPath() {
+        db.writableDatabase.execSQL("DELETE FROM planned_paths WHERE id=(SELECT id FROM planned_paths ORDER BY created_ms DESC,id DESC LIMIT 1)")
+    }
+
+    fun clearPlannedPaths() { db.writableDatabase.delete("planned_paths", null, null) }
 
     @Synchronized
     fun interruptPresence() {
@@ -305,11 +332,13 @@ class VisitRepository(context: Context) {
 
     fun allRevealCells(): List<RevealCell> = revealCells(Int.MAX_VALUE)
 
-    fun importCells(visitedCells: List<VisitedCell>, revealCells: List<RevealCell>, visitCounts: List<VisitCount> = emptyList()) {
+    fun importCells(visitedCells: List<VisitedCell>, revealCells: List<RevealCell>, visitCounts: List<VisitCount> = emptyList(),
+                    plannedPaths: List<PlannedPath> = emptyList()) {
         db.writableDatabase.transaction {
             visitedCells.forEach { cell -> importCell(cell) }
             revealCells.forEach { cell -> importRevealCell(cell) }
             if (visitCounts.isNotEmpty()) importVisitCounts(visitCounts)
+            if (plannedPaths.isNotEmpty()) savePlannedPaths(plannedPaths)
         }
     }
 
@@ -319,6 +348,7 @@ class VisitRepository(context: Context) {
             delete("visit_zones", null, null)
             delete("visited_cells", null, null)
             delete("reveal_cells", null, null)
+            delete("planned_paths", null, null)
         }
     }
 
@@ -463,17 +493,24 @@ private class VisitDatabase(context: Context) : SQLiteOpenHelper(
     context,
     "ovayuvam-world.db",
     null,
-    3,
+    4,
 ) {
     override fun onCreate(db: SQLiteDatabase) {
         createVisitedCells(db)
         createRevealCells(db)
         createVisitCounts(db)
+        createPlannedPaths(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) createRevealCells(db)
         if (oldVersion < 3) createVisitCounts(db)
+        if (oldVersion < 4) createPlannedPaths(db)
+    }
+
+    private fun createPlannedPaths(db: SQLiteDatabase) {
+        db.execSQL("""CREATE TABLE planned_paths(id TEXT NOT NULL,created_ms INTEGER NOT NULL,
+            cell_x INTEGER NOT NULL,cell_y INTEGER NOT NULL,PRIMARY KEY(id,cell_x,cell_y))""")
     }
 
     private fun createVisitCounts(db: SQLiteDatabase) {

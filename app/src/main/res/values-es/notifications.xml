@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="notification_everyday">
+        <item>"Un pequeño mapa, todo un mundo."</item>
+        <item>"Tu rincón del mundo aparece día a día."</item>
+        <item>"Unos pasos ya pueden dibujar un pequeño camino."</item>
+        <item>"En este mapa también caben los días corrientes."</item>
+        <item>"Tu mundo no tiene fecha límite."</item>
+        <item>"Una calle conocida también puede ser bonita."</item>
+        <item>"Con el tiempo, los espacios vacíos se llenan de recuerdos."</item>
+        <item>"Algunas aventuras caben entre casa y la panadería."</item>
+        <item>"Tu mapa es como un álbum de recuerdos."</item>
+        <item>"Un mundo pequeño puede guardar muchos recuerdos."</item>
+        <item>"Todo mapa empieza en algún lugar."</item>
+        <item>"Sin línea de meta, solo tu propio mundo."</item>
+        <item>"La niebla puede esperar. Disfruta del día."</item>
+        <item>"Una aventura no tiene que ser grande."</item>
+        <item>"Un rincón conocido bajo un cielo distinto."</item>
+        <item>"En tu mapa cabe un desvío con buenas vistas."</item>
+        <item>"Muchos lugares bonitos son de lo más normal."</item>
+        <item>"Un poco de curiosidad ya da para mucho."</item>
+        <item>"Tu mundo no necesita público."</item>
+        <item>"El mejor ritmo es el tuyo."</item>
+        <item>"Una colección de lugares que cabe en el bolsillo."</item>
+        <item>"Los mapas grandes se hacen con pequeños momentos."</item>
+        <item>"Los caminos de todos los días también son parte de tu historia."</item>
+        <item>"Un mapa no tiene que estar terminado para ser bonito."</item>
+    </string-array>
+    <string-array name="notification_progress">
+        <item>"Unos pasos más en tu pequeño atlas."</item>
+        <item>"Tu paseo de cada día tiene un sitio en el mapa."</item>
+        <item>"Un pequeño paseo ya forma parte de tu mundo."</item>
+        <item>"Un trocito de hoy se quedó en el mapa."</item>
+        <item>"Los pasos pequeños también dibujan caminos bonitos."</item>
+        <item>"Un poco de tu día a día, guardado para ti."</item>
+        <item>"Tus lugares conocidos tienen nueva compañía."</item>
+        <item>"Un pequeño camino en un mundo enorme."</item>
+        <item>"Tu mundo crece también en los días corrientes."</item>
+        <item>"Algunos paseos caben en la pausa para comer."</item>
+        <item>"Unos pasos que son solo tuyos."</item>
+        <item>"Un poco más de tu día en el mapa."</item>
+    </string-array>
+    <string-array name="notification_quiet">
+        <item>"Tu mundo seguirá aquí cuando vuelvas."</item>
+        <item>"No hay nada que recuperar. Tu mapa sigue siendo tuyo."</item>
+        <item>"Un día tranquilo también es un buen día."</item>
+        <item>"La niebla puede esperar a mañana."</item>
+        <item>"Sin rachas perdidas ni prisas."</item>
+        <item>"Tus descubrimientos siguen donde los dejaste."</item>
+        <item>"Descansar también forma parte de la aventura."</item>
+        <item>"Ya habrá tiempo para otro paseo."</item>
+        <item>"Tu mapa no pasa lista."</item>
+        <item>"Una pausa no borra el camino recorrido."</item>
+    </string-array>
+</resources>

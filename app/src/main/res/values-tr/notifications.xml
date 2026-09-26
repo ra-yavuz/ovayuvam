@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="notification_everyday">
+        <item>"Küçük bir harita, koca bir dünya."</item>
+        <item>"Dünyadaki köşen her gün biraz daha beliriyor."</item>
+        <item>"Birkaç adım bile güzel bir yol çizebilir."</item>
+        <item>"Sıradan günlerin de bu haritada yeri var."</item>
+        <item>"Dünyanın bir son teslim tarihi yok."</item>
+        <item>"Tanıdık bir sokak yine de güzel olabilir."</item>
+        <item>"Boşluklar zamanla anılara dönüşüyor."</item>
+        <item>"Bazı maceralar evle fırın arasına sığar."</item>
+        <item>"Haritan küçük bir hatıra defteri gibi."</item>
+        <item>"Küçük bir dünyaya çok anı sığar."</item>
+        <item>"Her harita bir yerden başlar."</item>
+        <item>"Bitiş çizgisi yok, sadece senin dünyan var."</item>
+        <item>"Sis bekleyebilir. Günün tadını çıkar."</item>
+        <item>"Bir maceranın büyük olması gerekmez."</item>
+        <item>"Tanıdık bir köşe, farklı bir gökyüzü."</item>
+        <item>"Manzaralı yola da haritanda yer var."</item>
+        <item>"En güzel yerlerin bazıları oldukça sıradandır."</item>
+        <item>"Biraz merak bile çok şey değiştirir."</item>
+        <item>"Dünyan senin. Seyirciye gerek yok."</item>
+        <item>"En iyi tempo, kendi tempon."</item>
+        <item>"Cebine sığan bir yerler koleksiyonu."</item>
+        <item>"Büyük haritalar küçük anlardan oluşur."</item>
+        <item>"Her gün yürüdüğün yollar da hikâyene ait."</item>
+        <item>"Bir haritanın güzel olması için tamamlanması gerekmez."</item>
+    </string-array>
+    <string-array name="notification_progress">
+        <item>"Küçük atlasında birkaç adım daha."</item>
+        <item>"Günlük yolculuğunun haritada bir yeri var."</item>
+        <item>"Küçük bir gezinti, küçük bir hatıra."</item>
+        <item>"Bugünden bir parça dünyanda kaldı."</item>
+        <item>"Küçük adımlar güzel yollar oluşturur."</item>
+        <item>"Günlük hayatından bir parça haritana eklendi."</item>
+        <item>"Tanıdık yerlerinin yanına yenileri geldi."</item>
+        <item>"Kocaman bir dünyada küçük bir yol."</item>
+        <item>"Dünyan sıradan günlerde de büyüyor."</item>
+        <item>"Bazı geziler öğle arasına bile sığar."</item>
+        <item>"Birkaç adım, tamamen sana ait."</item>
+        <item>"Günün bir parçası daha haritanda."</item>
+    </string-array>
+    <string-array name="notification_quiet">
+        <item>"Ne zaman dönersen dünyan burada."</item>
+        <item>"Yetişmen gereken bir şey yok. Haritan hâlâ senin."</item>
+        <item>"Sakin bir gün de güzel bir gündür."</item>
+        <item>"Sis başka bir günü bekleyebilir."</item>
+        <item>"Kaybolan seri yok, acele yok."</item>
+        <item>"Keşiflerin onları bıraktığın yerde duruyor."</item>
+        <item>"Dinlenmek de maceranın bir parçası."</item>
+        <item>"Başka bir gezinti için yine zaman olacak."</item>
+        <item>"Haritan yoklama tutmuyor."</item>
+        <item>"Ara vermek yürüdüğün yolları silmez."</item>
+    </string-array>
+</resources>

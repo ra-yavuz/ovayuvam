@@ -10,6 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalConfiguration
+import tr.ovayuva.ovayuvam.R
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -41,9 +44,9 @@ fun GrowthControls(
     Column(modifier.sketchSurface(MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
         MaterialTheme.colorScheme.outline, seed = 711).padding(horizontal = 10.dp, vertical = 6.dp)) {
         if (!compact) Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(if (hasDiscoveries) "Your world growing" else "No new discoveries",
+            Text(stringResource(if (hasDiscoveries) R.string.growth_title else R.string.growth_empty),
                 Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            ReplayAction(Icons.Default.Close, "Close replay", onClose)
+            ReplayAction(Icons.Default.Close, stringResource(R.string.close_replay), onClose)
         }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val columns = if (maxWidth < 420.dp && density.fontScale > 1.2f) 2 else 4
@@ -56,23 +59,29 @@ fun GrowthControls(
                                     activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                     activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer),
                                 shape = SegmentedButtonDefaults.itemShape(index, options.size), icon = {}) {
-                                Text(option.label, style = MaterialTheme.typography.labelLarge)
+                                Text(stringResource(when (option) {
+                                    GrowthPeriod.Week -> R.string.period_week
+                                    GrowthPeriod.Month -> R.string.period_month
+                                    GrowthPeriod.Year -> R.string.period_year
+                                    GrowthPeriod.All -> R.string.period_all
+                                }), style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     }
                 }
             }
         }
+        val dateLabel = stringResource(R.string.replay_date)
         Slider(value = fraction, onValueChange = onSeek,
             colors = SliderDefaults.colors(inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Replay date" })
+            modifier = Modifier.fillMaxWidth().semantics { contentDescription = dateLabel })
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ReplayAction(Icons.Default.Replay, "Restart replay", onRestart, hasDiscoveries)
+            ReplayAction(Icons.Default.Replay, stringResource(R.string.restart_replay), onRestart, hasDiscoveries)
             ReplayAction(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                if (playing) "Pause replay" else "Play replay", onPlayPause, hasDiscoveries)
-            Text(DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(dateMs)),
+                stringResource(if (playing) R.string.pause_replay else R.string.play_replay), onPlayPause, hasDiscoveries)
+            Text(DateFormat.getDateInstance(DateFormat.MEDIUM, LocalConfiguration.current.locales[0]).format(Date(dateMs)),
                 Modifier.weight(1f).padding(start = 8.dp), style = MaterialTheme.typography.bodyMedium)
-            if (compact) ReplayAction(Icons.Default.Close, "Close replay", onClose)
+            if (compact) ReplayAction(Icons.Default.Close, stringResource(R.string.close_replay), onClose)
         }
     }
 }

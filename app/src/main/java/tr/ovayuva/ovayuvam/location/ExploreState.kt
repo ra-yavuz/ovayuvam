@@ -13,7 +13,7 @@ import kotlin.math.cos
 internal class ExploreState(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("explore", Context.MODE_PRIVATE)
     var enabled: Boolean
-        get() = prefs.getBoolean("enabled", false)
+        get() = prefs.getBoolean("enabled", true)
         set(value) = synchronized(Lock) {
             prefs.edit().putBoolean("enabled", value).remove("restLat").remove("restLon")
                 .remove("anchorLat").remove("anchorLon").remove("targetLat").remove("targetLon")

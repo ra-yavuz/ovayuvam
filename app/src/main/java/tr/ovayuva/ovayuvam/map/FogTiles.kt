@@ -48,7 +48,7 @@ object FogTiles {
 
 data class FogMarkId(val x: Int, val y: Int, val road: Boolean, val legacy: Boolean)
 
-data class FogTileMark(val id: FogMarkId, val samples: Int, val visits: Int) {
+data class FogTileMark(val id: FogMarkId, val samples: Int, val visits: Int, val fresh: Boolean = false) {
     private val cellSize = if (id.legacy) 75.0 else 20.0
     val mx = (id.x + 0.5) * cellSize
     val my = (id.y + 0.5) * cellSize

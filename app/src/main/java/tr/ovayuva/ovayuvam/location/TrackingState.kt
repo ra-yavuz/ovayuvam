@@ -7,6 +7,17 @@ import tr.ovayuva.ovayuvam.domain.WorldCell
 class TrackingState(context: Context) {
     private val preferences = context.applicationContext.getSharedPreferences("tracking", Context.MODE_PRIVATE)
 
+    val consented: Boolean get() = preferences.getInt("disclosure-version", 0) >= 1
+    val enabled: Boolean get() = consented && preferences.getBoolean("enabled", false)
+
+    fun acceptDisclosure() {
+        preferences.edit().putInt("disclosure-version", 1).putBoolean("enabled", true).commit()
+    }
+
+    fun setEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean("enabled", enabled && consented).commit()
+    }
+
     fun isTracking(): Boolean = preferences.getBoolean("active", false)
 
     fun setTracking(active: Boolean) {

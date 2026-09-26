@@ -24,6 +24,8 @@ import tr.ovayuva.ovayuvam.domain.RevealCell
 import tr.ovayuva.ovayuvam.domain.WorldCell
 import tr.ovayuva.ovayuvam.domain.GeoPosition
 import tr.ovayuva.ovayuvam.storage.VisitRepository
+import tr.ovayuva.ovayuvam.R
+import tr.ovayuva.ovayuvam.ui.AppLanguage
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.ceil
@@ -68,7 +70,9 @@ class LocationTrailService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!canTrackLocation()) {
+        if (intent?.action == ActionPause) trackingState.setEnabled(false)
+        if (!trackingState.enabled || !canTrackLocation()) {
+            running = false
             trackingState.setTracking(false)
             stopSelf()
             return START_NOT_STICKY
@@ -87,7 +91,7 @@ class LocationTrailService : Service() {
         running = false
         workerHandler.removeCallbacksAndMessages(null)
         stopTracking()
-        workerHandler.post { repository.close() }
+        workerHandler.post { repository.interruptPresence(); repository.close() }
         worker.quitSafely()
         super.onDestroy()
     }
@@ -147,7 +151,7 @@ class LocationTrailService : Service() {
     }
 
     private fun acceptLocation(location: Location) {
-        if (!running) return
+        if (!running || !trackingState.enabled) return
         val now = System.currentTimeMillis()
         if (!location.isUsable(now)) {
             repository.interruptPresence()
@@ -301,8 +305,9 @@ class LocationTrailService : Service() {
     }
 
     private fun notificationText(nowMs: Long): String {
+        val context = AppLanguage.wrap(this)
         exploreState.target(nowMs)?.let {
-            return "A little unexplored corner nearby. Your weekly Explore here pin is waiting."
+            return context.getString(R.string.weekly_notification)
         }
         val todayStartMs = LocalDate.now(ZoneId.systemDefault())
             .atStartOfDay(ZoneId.systemDefault())
@@ -319,10 +324,16 @@ class LocationTrailService : Service() {
                 lastProgressMs = lastProgressMs,
                 nowMs = nowMs,
             ),
+            copy = NotificationCopy(context.resources.getStringArray(R.array.notification_everyday).toList(),
+                context.resources.getStringArray(R.array.notification_progress).toList(),
+                context.resources.getStringArray(R.array.notification_quiet).toList(),
+                context.getString(R.string.summary_area), context.getString(R.string.summary_distance),
+                context.getString(R.string.summary_small), context.resources.configuration.locales[0]),
         )
     }
 
     companion object {
+        const val ActionPause = "tr.ovayuva.ovayuvam.PAUSE"
         private const val MaxAcceptedAccuracyMeters = 75f
         private const val DefaultAccuracyMeters = 50f
         private const val MaxAcceptedAgeMs = 30_000L
@@ -336,10 +347,16 @@ class LocationTrailService : Service() {
         private const val NotificationMinRefreshMs = 5L * 60L * 1_000L
 
         fun start(context: Context) {
+            if (!TrackingState(context).enabled) return
             ContextCompat.startForegroundService(
                 context,
                 Intent(context, LocationTrailService::class.java),
             )
+        }
+
+        fun pause(context: Context) {
+            TrackingState(context).setEnabled(false)
+            context.stopService(Intent(context, LocationTrailService::class.java))
         }
     }
 }

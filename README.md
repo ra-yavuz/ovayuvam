@@ -40,17 +40,17 @@ contains:
 
 ## Download
 
-Version `0.8.0`, Android package `tr.ovayuva.ovayuvam`.
+Version `0.9.1`, Android package `tr.ovayuva.ovayuvam`.
 
 Visit [the product website](https://ovayuvam.ovayuva.tr/) to request a tester invitation.
-Downloads are through Google Play internal testing. This is not a public production release.
+Downloads are through Google Play testing. This is not a public production release.
 
 Install the update over the existing app to retain your revealed world, goal,
 and settings. Do not uninstall first. Visit counts have been recorded since
 version 0.6.0 and are retained by this update. Earlier GPS sample counts cannot
 tell us how many independent visits took place.
 
-Enable **Weekly exploration** in settings for an occasional nearby suggestion.
+**Weekly exploration** is on by default and can be turned off in settings.
 After an hour in one area, a suitable unexplored street or path within 500 metres
 can be marked **Explore here**. There is at most one suggestion per seven days;
 it expires after three days. Map access information may be incomplete, so follow
@@ -65,7 +65,19 @@ world grows. Earlier discoveries remain visible at the start of a shorter period
 Replay does not change saved history or stop tracking. It reconstructs first
 discoveries, not an exact route or past visit colors.
 
-The existing tracking notification rotates through 83 short messages about every
+New discoveries have a light green tint until the end of the phone's local day.
+The badge below the logo estimates the total revealed area in square metres.
+Overlapping brush shapes are counted once, including across core and road reveals.
+Revisits and painted plans do not increase that total. Area is calculated on a
+worker and cached independently of zoom. It is an estimate, not a land survey.
+
+The app includes English, German, Turkish, Russian, Spanish and French, with an
+offline language picker. A first-launch explanation precedes permissions. Pause
+tracking in settings or the ongoing notification; the pause survives reopening.
+Fog opacity is adjustable without fully revealing the map. The pen draws future
+paths that only partly lighten the fog; walking still reveals them normally.
+
+The tracking notification rotates through short messages about every
 90 minutes while the service runs. Updates are silent and replace the same
 notification. No separate reminders or wake-up alarms are scheduled. Android
 may delay a change while the phone sleeps. Evening progress summaries remain.
@@ -73,12 +85,12 @@ may delay a change while the phone sleeps. Evening progress summaries remain.
 Visit tint grows gradually with the number of visits, with room to distinguish
 dozens, hundreds, and thousands of returns. It stays below 36% opacity, fades in
 between zoom 14.5 and 12, and is absent at the default close-up view. A default
-150-meter stay radius groups movement around a home or garden; the settings
-sheet allows a larger area. Another visit requires reliable evidence of leaving
+150-meter stay radius groups movement around a home or garden. This radius is
+not user-configurable. Another visit requires reliable evidence of leaving
 and returning. GPS gaps and uncertain fixes may cause visits to be undercounted.
 
-Encrypted backups include revealed cells, visit counts, and the optional goal
-pin. Older backups remain readable. Keep your passphrase; ovayuvam cannot recover
+Encrypted backups include revealed cells, visit counts, planned paths and the
+optional goal pin. Older backups remain readable. Keep your passphrase; ovayuvam cannot recover
 it. Select a file first, then enter its passphrase. Import and export show progress
 and a clear result. Imports merge with your existing world. This feature does not
 add accounts, automatic cloud sync, or friend sharing.
@@ -86,7 +98,7 @@ add accounts, automatic cloud sync, or friend sharing.
 Version 0.7.2 uses reusable geographic fog tiles and smaller overview images when
 you zoom out. New exploration updates nearby tiles. The brush radius stays tied
 to real distance. Rendering pauses when the map is off screen; location tracking
-continues as before. See the [release notes](docs/RELEASE-0.8.0.md) and
+continues when enabled. See the [release notes](docs/RELEASE-0.9.1.md) and
 [rendering design](docs/FOG-RENDERING.md).
 
 ## What is deliberately out of scope for version 1

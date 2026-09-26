@@ -30,8 +30,11 @@ class ReleaseChecks : Instrumentation() {
     private var growthCamera = false
     private var exploration = false
     private var exploreScene = false
+    private var reviewCandidate = false
+    private var discoveries = false
     private fun checkExploreScene() {
         check(targetContext.packageName.endsWith(".verification"))
+        TrackingState(targetContext).acceptDisclosure()
         val home = GeoPosition(41.0082, 28.9784)
         val now = System.currentTimeMillis()
         targetContext.getSharedPreferences("explore", Context.MODE_PRIVATE).edit().clear().commit()
@@ -61,7 +64,7 @@ class ReleaseChecks : Instrumentation() {
         val home = GeoPosition(41.0, 29.0)
         val target = GeoPosition(41.0005, 29.0)
         var now = 1_000_000L
-        check(!state.enabled && state.target(now) == null)
+        check(state.enabled && state.target(now) == null)
         state.enabled = true
         state.observe(home, 10f, now)
         check(state.anchor(now) == null && !state.offer(target, home, now))
@@ -95,12 +98,26 @@ class ReleaseChecks : Instrumentation() {
         growthCamera = arguments?.getString("growthCamera") == "true"
         exploration = arguments?.getString("exploration") == "true"
         exploreScene = arguments?.getString("exploreScene") == "true"
+        reviewCandidate = arguments?.getString("reviewCandidate") == "true"
+        discoveries = arguments?.getString("discoveries") == "true"
         super.onCreate(arguments)
         start()
     }
     override fun onStart() {
         val result = Bundle()
         try {
+            if (discoveries) {
+                checkDiscoveries()
+                result.putString("stream", "PASS: fresh discoveries, midnight reset, tile reuse, geographic area union and overlap\n")
+                finish(-1, result)
+                return
+            }
+            if (reviewCandidate) {
+                checkReviewCandidate(targetContext)
+                result.putString("stream", "PASS: disclosure and pause persistence, planned paths and atomic backup, partial fog, six languages\n")
+                finish(-1, result)
+                return
+            }
             if (exploreScene) {
                 checkExploreScene()
                 result.putString("stream", "PASS: real map tiles select nearby unrevealed street and draw Explore here\n")
@@ -214,6 +231,8 @@ class ReleaseChecks : Instrumentation() {
 
     private fun captureHeat() {
         check(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk")) { "Emulator only" }
+        TrackingState(targetContext).acceptDisclosure()
+        TrackingState(targetContext).setEnabled(false)
         val repository = VisitRepository(targetContext)
         val baseline = repository.allVisitedCells()
         val center = WorldCell.fromLocation(48.863, 2.331)

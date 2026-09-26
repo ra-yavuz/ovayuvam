@@ -31,6 +31,8 @@ fun Instrumentation.checkGrowthCamera() {
             RevealCell.Kind.Core, now-days*86_400_000L)
     }
     TrackingState(targetContext).setCurrentLocation(48.863,2.331,WorldCell.fromLocation(48.863,2.331))
+    TrackingState(targetContext).acceptDisclosure()
+    TrackingState(targetContext).setEnabled(false)
     val activity = startActivitySync(Intent(targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     fun findMap(view: View): MapView? {
         if (view is MapView) return view
@@ -62,7 +64,7 @@ fun Instrumentation.checkGrowthCamera() {
         check(target.performAction(AccessibilityNodeInfo.ACTION_CLICK))
         Thread.sleep(400)
     }
-    click("Info")
+    click("Settings")
     click("Watch your world grow")
     val output = File(targetContext.filesDir,"growth-camera").apply { mkdirs() }
     val frames = JSONArray()

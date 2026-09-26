@@ -17,6 +17,29 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import tr.ovayuva.ovayuvam.ui.AppLanguage
+import tr.ovayuva.ovayuvam.ui.WorldSettings
+import tr.ovayuva.ovayuvam.ui.TrackingWelcome
+import tr.ovayuva.ovayuvam.domain.PlannedPath
+import tr.ovayuva.ovayuvam.domain.PathBrush
+import tr.ovayuva.ovayuvam.storage.MapPreferences
+import tr.ovayuva.ovayuvam.map.FogAppearance
+import tr.ovayuva.ovayuvam.map.DiscoveryDay
+import tr.ovayuva.ovayuvam.map.RevealedArea
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -47,6 +70,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -59,6 +83,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -68,6 +93,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
@@ -146,6 +172,8 @@ import kotlin.math.roundToInt
 class MainActivity : ComponentActivity() {
     private val repository by lazy { VisitRepository(this) }
 
+    override fun attachBaseContext(newBase: Context) { super.attachBaseContext(AppLanguage.wrap(newBase)) }
+
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -183,24 +211,35 @@ private data class RevealMark(
 @Composable
 private fun OvayuvamScreen(repository: VisitRepository) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val trackingState = remember { TrackingState(context) }
     val exploreState = remember { ExploreState(context) }
     var exploreEnabled by remember { mutableStateOf(exploreState.enabled) }
     val visitPreferences = remember { VisitPreferences(context) }
     var showHeat by remember { mutableStateOf(visitPreferences.showHeat) }
-    var stayRadius by remember { mutableIntStateOf(visitPreferences.stayRadius) }
+    val appearance = remember { MapPreferences(context) }
+    var fogOpacity by remember { mutableFloatStateOf(appearance.fogOpacity) }
+    var welcome by rememberSaveable { mutableStateOf(!trackingState.consented) }
+    var trackingEnabled by remember { mutableStateOf(trackingState.enabled) }
+    var planning by rememberSaveable { mutableStateOf(false) }
+    var paths by remember { mutableStateOf(emptyList<PlannedPath>()) }
+    var planBusy by remember { mutableStateOf(false) }
+    var clearPlans by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     var worldData by remember {
         mutableStateOf(WorldMapData(emptyList(), emptyList(), emptyList()), referentialEqualityPolicy())
     }
     val cells = worldData.cells
     val revealCells = worldData.reveal
     val visits = worldData.visits
-    var visitsStarted by remember { mutableStateOf<Long?>(null) }
+    val areaCounter = remember { RevealedArea() }
+    var revealedArea by remember { mutableDoubleStateOf(0.0) }
+    var today by remember { mutableStateOf(DiscoveryDay.at()) }
     var currentCell by remember { mutableStateOf(trackingState.currentCell()) }
     var currentPosition by remember { mutableStateOf(trackingState.currentPosition()) }
     var goal by remember { mutableStateOf(exploreState.target()) }
     var tracking by remember { mutableStateOf(trackingState.isTracking()) }
-    var status by remember { mutableStateOf("Revealing your world") }
+    var status by remember { mutableStateOf(resources.getString(R.string.reveal_status)) }
     var infoOpen by remember { mutableStateOf(false) }
     var recenterRequest by remember { mutableIntStateOf(0) }
     var following by remember { mutableStateOf(true) }
@@ -214,6 +253,17 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     var growth by remember { mutableStateOf<WorldGrowth?>(null) }
     var replayPanelHeightPx by remember { mutableIntStateOf(0) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(cells, revealCells) {
+        revealedArea = withContext(Dispatchers.Default) { areaCounter.update(cells, revealCells) }
+    }
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                today = DiscoveryDay.at()
+                delay(minOf(30_000L, (today.endMs - System.currentTimeMillis()).coerceAtLeast(1L)))
+            }
+        }
+    }
     val replayRange = remember(growth, replayPeriod) { growth?.range(replayPeriod) }
     val replayHasDiscoveries = remember(growth, replayRange) {
         replayRange?.let { growth?.hasDiscoveries(it) } == true
@@ -232,13 +282,13 @@ private fun OvayuvamScreen(repository: VisitRepository) {
             }
             if (snapshot.hasHistory) growth = snapshot else {
                 replayOpen = false
-                status = "No discoveries to replay yet."
+                status = resources.getString(R.string.no_discoveries)
             }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             replayOpen = false
-            status = "Could not open replay: ${error.userMessage()}"
+            status = resources.getString(R.string.replay_error)
         }
     }
 
@@ -262,16 +312,18 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         currentPosition = trackingState.currentPosition()
         goal = exploreState.target()
         tracking = trackingState.isTracking()
+        trackingEnabled = trackingState.enabled
     }
 
     fun startTracking() {
         when {
-            !hasLocationPermission(context) -> status = "Location permission is needed to reveal the map."
-            !isDeviceLocationEnabled(context) -> status = "Turn on Android Location to reveal the map."
+            !trackingState.enabled -> Unit
+            !hasLocationPermission(context) -> status = resources.getString(R.string.location_needed)
+            !isDeviceLocationEnabled(context) -> status = resources.getString(R.string.location_off)
             else -> {
                 LocationTrailService.start(context)
                 tracking = true
-                status = "Revealing your world"
+                status = resources.getString(R.string.reveal_status)
             }
         }
     }
@@ -282,7 +334,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         val hasLocation = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true ||
             hasLocationPermission(context)
-        if (hasLocation) startTracking() else status = "Location permission is needed to reveal the map."
+        if (hasLocation) startTracking() else status = resources.getString(R.string.location_needed)
     }
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -306,6 +358,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
     }
 
     LaunchedEffect(Unit) {
+        if (!trackingState.enabled) return@LaunchedEffect
         if (hasLocationPermission(context)) {
             startTracking()
         } else {
@@ -313,11 +366,43 @@ private fun OvayuvamScreen(repository: VisitRepository) {
         }
     }
 
+    LaunchedEffect(worldRevision) { paths = withContext(Dispatchers.IO) { repository.plannedPaths() } }
+
+    fun editPaths(action: () -> Unit) {
+        if (planBusy) return
+        planBusy = true
+        scope.launch {
+            try {
+                paths = withContext(Dispatchers.IO) { action(); repository.plannedPaths() }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) { status = resources.getString(R.string.plan_error) }
+            finally { planBusy = false }
+        }
+    }
+
+    if (welcome) {
+        TrackingWelcome(onContinue = {
+            trackingState.acceptDisclosure()
+            trackingEnabled = true
+            welcome = false
+            if (hasLocationPermission(context)) startTracking() else permissionLauncher.launch(requiredPermissions())
+        }, onNotNow = { welcome = false })
+        return
+    }
+
     LaunchedEffect(Unit) {
         while (true) {
             refresh()
             delay(750L)
         }
+    }
+
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && trackingState.enabled && hasLocationPermission(context)) startTracking()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(replayOpen, lifecycle, worldRevision) {
@@ -331,42 +416,62 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                         .takeUnless { it == previous }
                 }
                 if (data != null) worldData = data
-                visitsStarted = withContext(Dispatchers.IO) { repository.visitsStartedMs() }
                 delay(2_000L)
             }
         }
     }
 
     if (infoOpen) {
-        InfoDialog(
+        WorldSettings(
             onReplay = {
                 infoOpen = false
                 replayPeriod = GrowthPeriod.All
                 replayFraction = 0f
                 replayPlaying = true
                 replayOpen = true
+                planning = false
             },
             showHeat = showHeat,
-            onShowHeatChange = { showHeat = it; visitPreferences.showHeat = it },
-            stayRadius = stayRadius,
-            onStayRadiusChange = { stayRadius = it; visitPreferences.stayRadius = it },
-            visitsStarted = visitsStarted,
+            onHeatChange = { showHeat = it; visitPreferences.showHeat = it },
+            fog = fogOpacity,
+            onFogChange = { fogOpacity = it; appearance.fogOpacity = it },
             tracking = tracking,
-            exploreEnabled = exploreEnabled,
-            onExploreChange = {
+            trackingEnabled = trackingEnabled,
+            onTrackingChange = { enabled ->
+                if (!enabled) {
+                    LocationTrailService.pause(context)
+                    trackingEnabled = false
+                    tracking = false
+                    status = resources.getString(R.string.reveal_status)
+                } else if (!trackingState.consented) {
+                    infoOpen = false
+                    welcome = true
+                } else {
+                    trackingState.setEnabled(true)
+                    trackingEnabled = true
+                    if (hasLocationPermission(context)) startTracking() else permissionLauncher.launch(requiredPermissions())
+                }
+            },
+            weekly = exploreEnabled,
+            onWeeklyChange = {
                 exploreEnabled = it
                 exploreState.enabled = it
                 goal = null
             },
-            onExportWorld = {
+            onExport = {
                 exportLauncher.launch("ovayuvam-world-${System.currentTimeMillis()}.ovayuvam")
             },
-            onImportWorld = {
+            onImport = {
                 importLauncher.launch(arrayOf("*/*"))
             },
             onDismiss = { infoOpen = false },
         )
     }
+
+    if (clearPlans) AlertDialog(onDismissRequest = { clearPlans = false },
+        title = { Text(stringResource(R.string.clear_paths)) }, text = { Text(stringResource(R.string.clear_paths_confirm)) },
+        confirmButton = { TextButton(onClick = { clearPlans = false; editPaths { repository.clearPlannedPaths() } }) { Text(stringResource(R.string.delete_label)) } },
+        dismissButton = { TextButton(onClick = { clearPlans = false }) { Text(stringResource(R.string.cancel)) } })
 
     backupUri?.let { selected ->
         BackupDocumentDialog(
@@ -384,6 +489,12 @@ private fun OvayuvamScreen(repository: VisitRepository) {
 
     Box(Modifier.fillMaxSize().background(Paper)) {
         FogWorldMap(
+            fogOpacity = fogOpacity,
+            today = if (replayOpen) null else today,
+            plannedPaths = if (replayOpen) emptyList() else paths,
+            planning = planning && !replayOpen && !planBusy,
+            onPath = { cells -> editPaths { repository.savePlannedPaths(listOf(PlannedPath(cells = cells))) } },
+            onPlanZoom = { status = resources.getString(R.string.plan_zoom) },
             visits = if (showHeat && !replayOpen) visits else emptyList(),
             replayOpen = replayOpen,
             replayBounds = replayFrame?.bounds ?: growth?.initialBounds,
@@ -393,8 +504,8 @@ private fun OvayuvamScreen(repository: VisitRepository) {
             currentCell = if (replayOpen) null else currentCell,
             currentPosition = if (replayOpen) null else currentPosition,
             goal = if (replayOpen) null else goal,
-            exploreEnabled = exploreEnabled && !replayOpen,
-            following = following && !replayOpen,
+            exploreEnabled = exploreEnabled && trackingEnabled && !replayOpen,
+            following = following && !replayOpen && !planning,
             recenterRequest = recenterRequest,
             onUserMovedMap = { if (!replayOpen) following = false },
             onGoalSelected = { position ->
@@ -402,26 +513,46 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                     val current = currentPosition
                     if (current != null && exploreState.offer(position, current, System.currentTimeMillis())) {
                         goal = exploreState.target()
-                        status = "Explore here: a little more of your world"
+                        status = resources.getString(R.string.explore_here)
                     }
                 }
             },
             onRoadCellsObserved = { cells ->
-                repository.recordRevealCells(cells, RevealCell.Kind.Road)
+                if (trackingState.enabled && trackingState.isTracking()) {
+                    scope.launch(Dispatchers.IO) {
+                        if (trackingState.enabled) repository.recordRevealCells(cells, RevealCell.Kind.Road)
+                    }
+                }
             },
             modifier = Modifier.fillMaxSize(),
         )
 
-        BrandPill(
+        Column(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .statusBarsPadding()
-                .padding(start = 12.dp, top = 12.dp),
-        )
+                .padding(start = 12.dp, top = 12.dp, end = 84.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            BrandPill()
+            if (revealedArea > 0 && !replayOpen) {
+                val locale = resources.configuration.locales[0]
+                val number = remember(revealedArea, locale) {
+                    java.text.NumberFormat.getIntegerInstance(locale).format(revealedArea.toLong())
+                }
+                Surface(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    shape = MaterialTheme.shapes.small, modifier = Modifier.widthIn(max = 260.dp)) {
+                    Text(stringResource(R.string.revealed_area, number),
+                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
 
         MapIconButton(
             icon = R.drawable.art_map,
-            label = "Info",
+            label = stringResource(R.string.settings),
             onClick = { infoOpen = true },
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -431,7 +562,7 @@ private fun OvayuvamScreen(repository: VisitRepository) {
 
         if (!replayOpen) MapIconButton(
             icon = R.drawable.art_recenter,
-            label = "Center map on me",
+            label = stringResource(R.string.center_map),
             enabled = currentPosition != null || currentCell != null,
             onClick = {
                 following = true
@@ -442,6 +573,26 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 .navigationBarsPadding()
                 .padding(end = 12.dp, bottom = 12.dp),
         )
+
+        if (!replayOpen) Column(Modifier.align(Alignment.BottomEnd).navigationBarsPadding()
+            .padding(end = 12.dp, bottom = 76.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            if (planning) Surface(color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.small) {
+                Column {
+                    IconButton(onClick = { editPaths { repository.undoPlannedPath() } }, enabled = paths.isNotEmpty() && !planBusy) {
+                        Icon(Icons.AutoMirrored.Filled.Undo, stringResource(R.string.undo_path))
+                    }
+                    IconButton(onClick = { clearPlans = true }, enabled = paths.isNotEmpty() && !planBusy) {
+                        Icon(Icons.Default.DeleteOutline, stringResource(R.string.clear_paths))
+                    }
+                    IconButton(onClick = { planning = false }) { Icon(Icons.Default.Check, stringResource(R.string.done)) }
+                }
+            } else MapIconButton(R.drawable.art_pen, stringResource(R.string.plan_path), {
+                planning = true; following = false
+                if (status == resources.getString(R.string.plan_zoom) || status == resources.getString(R.string.plan_error)) {
+                    status = resources.getString(R.string.reveal_status)
+                }
+            })
+        }
 
         if (replayOpen) Column(
             Modifier.align(Alignment.BottomCenter).onSizeChanged { replayPanelHeightPx = it.height }
@@ -465,8 +616,8 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
-                StatusPill("Opening your world...")
-                TextButton(onClick = { replayOpen = false }) { Text("Cancel") }
+                StatusPill(stringResource(R.string.opening_world))
+                TextButton(onClick = { replayOpen = false }) { Text(stringResource(R.string.cancel)) }
             }
             Spacer(Modifier.height(8.dp))
             AttributionPill()
@@ -476,8 +627,9 @@ private fun OvayuvamScreen(repository: VisitRepository) {
                 .navigationBarsPadding()
                 .padding(start = 12.dp, bottom = 12.dp, end = 84.dp),
         ) {
-            if (!tracking || currentCell == null || status != "Revealing your world") {
-                StatusPill(text = if (status != "Revealing your world") status else "Finding your place")
+            if (!tracking || currentCell == null || status != resources.getString(R.string.reveal_status)) {
+                StatusPill(text = if (status != resources.getString(R.string.reveal_status)) status
+                    else resources.getString(if (!trackingEnabled) R.string.tracking_paused else R.string.finding_location))
                 Spacer(Modifier.height(8.dp))
             }
             AttributionPill()
@@ -503,12 +655,13 @@ private fun BrandPill(modifier: Modifier = Modifier) {
                 painter = painterResource(R.drawable.launcher_map_foreground),
                 contentDescription = null,
                 modifier = Modifier.size(32.dp),
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = "ovayuvam",
                 style = MaterialTheme.typography.titleLarge,
-                color = Forest,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -529,7 +682,7 @@ private fun StatusPill(text: String, modifier: Modifier = Modifier) {
             text = text,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
             style = MaterialTheme.typography.bodyMedium,
-            color = Ink,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -580,84 +733,21 @@ private fun MapIconButton(
                 contentDescription = label,
                 modifier = Modifier.size(34.dp),
                 alpha = if (enabled) 1f else 0.42f,
+                colorFilter = if (icon == R.drawable.art_pen) null else ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
             )
         }
     }
 }
 
-@Composable
-private fun InfoDialog(
-    onReplay: () -> Unit,
-    showHeat: Boolean,
-    onShowHeatChange: (Boolean) -> Unit,
-    stayRadius: Int,
-    onStayRadiusChange: (Int) -> Unit,
-    visitsStarted: Long?,
-    tracking: Boolean,
-    exploreEnabled: Boolean,
-    onExploreChange: (Boolean) -> Unit,
-    onExportWorld: () -> Unit,
-    onImportWorld: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("ovayuvam") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                TextButton(onClick = onReplay) { Text("Watch your world grow") }
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Visit colors", Modifier.weight(1f))
-                    Switch(checked = showHeat, onCheckedChange = onShowHeatChange)
-                }
-                Text("Stay area: $stayRadius m", style = MaterialTheme.typography.bodyMedium)
-                Slider(value = stayRadius.toFloat(), onValueChange = { onStayRadiusChange((it / 50).roundToInt() * 50) },
-                    valueRange = 150f..1000f, steps = 16)
-                Text("Movement within this radius belongs to one stay. A larger radius also groups nearby places together.", style = MaterialTheme.typography.bodySmall)
-                Text(visitsStarted?.let { "Visits counted since ${java.text.DateFormat.getDateInstance().format(java.util.Date(it))}" }
-                    ?: "Visit history starts with your next confirmed visit.", style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(10.dp))
-                Text("Your own world starts immediately after location permission is granted.")
-                Spacer(Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Weekly exploration", Modifier.weight(1f))
-                    Switch(checked = exploreEnabled, onCheckedChange = onExploreChange)
-                }
-                Text("One nearby street or path beyond your explored world, after an hour in one area. Suggestions last three days. Follow local signs and access rules.", style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(10.dp))
-                Text("The visible map uses OpenFreeMap tiles. Your revealed world is stored as local cells on this phone. There is no ovayuva account, no ads, and no ovayuva backend.")
-                Spacer(Modifier.height(10.dp))
-                Text(if (tracking) "Tracking is on and shown by a notification." else "Tracking is waiting for location access.")
-                Spacer(Modifier.height(10.dp))
-                Text("Encrypted backup")
-                Spacer(Modifier.height(6.dp))
-                Text("Export saves your revealed world to an encrypted file. Keep the passphrase. It is needed after reinstall, and ovayuvam cannot recover it.")
-                Spacer(Modifier.height(8.dp))
-                Row {
-                    TextButton(
-                        onClick = onExportWorld,
-                    ) { Text("Export world") }
-                    TextButton(
-                        onClick = onImportWorld,
-                    ) { Text("Import world") }
-                }
-                Spacer(Modifier.height(10.dp))
-                Text("Privacy policy: https://ovayuva.tr/yuvam/privacy/")
-                Spacer(Modifier.height(10.dp))
-                Text("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(10.dp))
-                Text("Map data: ${BasemapStyle.Attribution}. Operator: Ramazan Yavuz. Contact: yavuzramazan1994@gmail.com. No warranty is provided.")
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
-        },
-    )
-}
 
 @Composable
 private fun FogWorldMap(
+    fogOpacity: Float,
+    today: DiscoveryDay?,
+    plannedPaths: List<PlannedPath>,
+    planning: Boolean,
+    onPath: (List<WorldCell>) -> Unit,
+    onPlanZoom: () -> Unit,
     visits: List<VisitCount>,
     replayOpen: Boolean,
     replayBounds: GrowthBounds?,
@@ -692,6 +782,14 @@ private fun FogWorldMap(
     var replayCameraReady by remember { mutableStateOf(false) }
     val density = LocalDensity.current.density
     var mapSize by remember { mutableStateOf(IntSize.Zero) }
+    var draft by remember { mutableStateOf(emptyList<WorldCell>()) }
+    val plannedCells = remember(plannedPaths) {
+        plannedPaths.flatMap { it.cells }.distinct().map {
+            RevealCell(it.x, it.y, RevealCell.Kind.Core, 0, 0, 8)
+        }
+    }
+    val latestPath by rememberUpdatedState(onPath)
+    val latestPlanZoom by rememberUpdatedState(onPlanZoom)
 
     LaunchedEffect(activeMap, exploreEnabled, mapResumed) {
         val map = activeMap ?: return@LaunchedEffect
@@ -837,6 +935,10 @@ private fun FogWorldMap(
 
         AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
         FogRevealOverlay(
+            fogOpacity = fogOpacity,
+            today = today,
+            plannedCells = plannedCells,
+            draftCells = draft,
             visits = visits,
             cells = cells,
             revealCells = revealCells,
@@ -847,6 +949,43 @@ private fun FogWorldMap(
             cameraTick = cameraTick,
             modifier = Modifier.fillMaxSize(),
         )
+
+        if (planning) Box(Modifier.fillMaxSize().pointerInput(activeMap) {
+            val map = activeMap ?: return@pointerInput
+            awaitEachGesture {
+                val first = awaitFirstDown(requireUnconsumed = false)
+                first.consume()
+                if (map.cameraPosition.zoom < 14) {
+                    latestPlanZoom()
+                    return@awaitEachGesture
+                }
+                fun position(point: Offset): GeoPosition {
+                    val geo = map.projection.fromScreenLocation(android.graphics.PointF(point.x, point.y))
+                    return GeoPosition(geo.latitude, geo.longitude)
+                }
+                val cells = linkedSetOf<WorldCell>()
+                var previous = position(first.position)
+                cells.addAll(PathBrush.segment(previous, previous))
+                draft = cells.toList()
+                var cancelled = false
+                try {
+                    do {
+                        val event = awaitPointerEvent()
+                        if (event.changes.count { it.pressed } > 1) cancelled = true
+                        val change = event.changes.firstOrNull { it.id == first.id }
+                        event.changes.forEach { it.consume() }
+                        if (change == null || !change.pressed) break
+                        if (!cancelled) {
+                            val next = position(change.position)
+                            cells.addAll(PathBrush.segment(previous, next))
+                            previous = next
+                            if (cells.size > 2_000) cancelled = true else draft = cells.toList()
+                        }
+                    } while (true)
+                    if (!cancelled && cells.isNotEmpty()) latestPath(cells.toList())
+                } finally { draft = emptyList() }
+            }
+        })
 
         DisposableEffect(mapView, lifecycle) {
             var started = false
@@ -910,6 +1049,10 @@ private fun FogWorldMap(
 
 @Composable
 private fun FogRevealOverlay(
+    fogOpacity: Float,
+    today: DiscoveryDay?,
+    plannedCells: List<RevealCell>,
+    draftCells: List<WorldCell>,
     visits: List<VisitCount>,
     cells: List<VisitedCell>,
     revealCells: List<RevealCell>,
@@ -921,19 +1064,48 @@ private fun FogRevealOverlay(
     modifier: Modifier = Modifier,
 ) {
     val cache = remember { FogTileCache() }
+    val planCache = remember { FogTileCache(8 * 1024 * 1024) }
+    var planFrame by remember { mutableStateOf<FogTileFrame?>(null) }
     var frame by remember { mutableStateOf<FogTileFrame?>(null) }
     var viewportSize by remember { mutableStateOf(IntSize.Zero) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val heatPaint = remember { android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG) }
+    val freshPaint = remember {
+        android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
+            colorFilter = android.graphics.PorterDuffColorFilter(0xff4c9c68.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+            alpha = 48
+        }
+    }
     val maskPaint = remember {
         android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
             xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT)
         }
     }
-    LaunchedEffect(map, cells, revealCells, visits, viewportSize, lifecycle) {
+    val planPaint = remember {
+        android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
+            alpha = (FogAppearance.PlanErasure * 255).roundToInt()
+            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT)
+        }
+    }
+    val unionPaint = remember { android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG) }
+    val goalLabel = stringResource(R.string.explore_here)
+    LaunchedEffect(map, plannedCells, viewportSize, lifecycle) {
         if (map == null || viewportSize.width == 0 || viewportSize.height == 0) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            withContext(Dispatchers.Default) { cache.update(cells, revealCells, visits) }
+            withContext(Dispatchers.Default) { planCache.update(emptyList(), plannedCells, emptyList()) }
+            while (true) {
+                val tick = cameraTick.value
+                val view = map.fogViewport(viewportSize.width, viewportSize.height)
+                planFrame = withContext(Dispatchers.Default) { planCache.frame(view) }
+                snapshotFlow { cameraTick.value }.first { it != tick }
+                delay(80)
+            }
+        }
+    }
+    LaunchedEffect(map, cells, revealCells, visits, today, viewportSize, lifecycle) {
+        if (map == null || viewportSize.width == 0 || viewportSize.height == 0) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            withContext(Dispatchers.Default) { cache.update(cells, revealCells, visits, today) }
             while (true) {
                 val tick = cameraTick.value
                 val view = map.fogViewport(viewportSize.width, viewportSize.height)
@@ -951,6 +1123,9 @@ private fun FogRevealOverlay(
             heatPaint.alpha = (((14.5-zoom)/2.5).coerceIn(0.0,1.0)*255).roundToInt()
             if (heatPaint.alpha > 0) drawFogTiles(map, cached, heatPaint, heat = true)
         }
+        if (map != null && cached != null && today != null && cached.day == today) {
+            drawFogTiles(map, cached, freshPaint, heat = false, fresh = true)
+        }
     }
     Canvas(
         modifier = modifier.graphicsLayer {
@@ -958,8 +1133,24 @@ private fun FogRevealOverlay(
         },
     ) {
         cameraTick.value
-        drawRect(Fog)
+        drawRect(Fog.copy(alpha = FogAppearance.opacity(fogOpacity)))
         if (map != null) {
+            if (plannedCells.isNotEmpty() || draftCells.isNotEmpty()) {
+                // Union masks first, then lighten once. Overlapping plans never erase more fog.
+                drawIntoCanvas { canvas ->
+                    val layer = canvas.nativeCanvas.saveLayer(RectF(0f, 0f, size.width, size.height), planPaint)
+                    planFrame?.let { drawFogTiles(map, it, unionPaint, heat = false) }
+                    draftCells.forEach { cell ->
+                        val position = cell.centerPosition(WorldCell.RevealCellSizeMeters)
+                        val point = map.projection.toScreenLocation(position.toLatLng())
+                        val radius = radiusPixels(map, position, CoreRevealRadiusMeters)
+                        RevealBrush.circles(cell.x,cell.y,8,false,radius) { dx,dy,r,alpha ->
+                            drawCircle(Color.White.copy(alpha = alpha),r,Offset(point.x + dx,point.y + dy))
+                        }
+                    }
+                    canvas.nativeCanvas.restoreToCount(layer)
+                }
+            }
             frame?.let { drawFogTiles(map, it, maskPaint, heat = false) }
             val position = currentPosition ?: currentCell?.centerPosition()
             position?.let {
@@ -968,7 +1159,7 @@ private fun FogRevealOverlay(
                     Offset(point.x,point.y),radiusPixels(map,it,CoreRevealRadiusMeters),8,RevealCell.Kind.Core))
             }
             currentPosition?.let { drawCurrentDot(map, it) }
-            goal?.let { drawGoal(map, it) }
+            goal?.let { drawGoal(map, it, goalLabel) }
         }
     }
 }
@@ -982,13 +1173,13 @@ private fun MapLibreMap.fogViewport(width: Int, height: Int): FogViewport {
 }
 
 private fun DrawScope.drawFogTiles(map: MapLibreMap, frame: FogTileFrame,
-                                  paint: android.graphics.Paint, heat: Boolean) {
+                                  paint: android.graphics.Paint, heat: Boolean, fresh: Boolean = false) {
     val view = map.fogViewport(size.width.roundToInt(), size.height.roundToInt())
     // A coarse overview must never grow into a street-sized false reveal.
     if (FogTiles.level(view) > frame.level + 1) return
     drawIntoCanvas { canvas ->
         for ((key, tile) in frame.images) {
-            val bitmap = (if (heat) tile.heat else tile.reveal) ?: continue
+            val bitmap = (if (fresh) tile.fresh else if (heat) tile.heat else tile.reveal) ?: continue
             val span = key.span
             val left = view.screenX(key.left + span / 2) - span / view.metersPerPixel / 2
             val top = view.screenY(key.top)
@@ -1020,13 +1211,13 @@ private fun DrawScope.drawCurrentDot(map: MapLibreMap, position: GeoPosition) {
     drawCircle(Color(0xFF3A2E1E), 10.dp.toPx(), point, style = Stroke(1.4.dp.toPx()))
 }
 
-private fun DrawScope.drawGoal(map: MapLibreMap, goal: GoalPin) {
+private fun DrawScope.drawGoal(map: MapLibreMap, goal: GoalPin, label: String) {
     val screen = map.projection.toScreenLocation(goal.position.toLatLng())
     val point = Offset(screen.x, screen.y)
     val visible = point.x in 0f..size.width && point.y in 0f..size.height
     if (visible) {
         drawGoalPin(point)
-        drawContext.canvas.nativeCanvas.drawText("Explore here", point.x, point.y - 54.dp.toPx(),
+        drawContext.canvas.nativeCanvas.drawText(label, point.x, point.y - 54.dp.toPx(),
             android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                 color = android.graphics.Color.WHITE
                 textSize = 14.sp.toPx()
@@ -1201,5 +1392,3 @@ private fun isDeviceLocationEnabled(context: Context): Boolean {
             runCatching { locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) }.getOrDefault(false)
     }
 }
-
-private fun Exception.userMessage(): String = message?.takeIf { it.isNotBlank() } ?: "Check the file and passphrase."

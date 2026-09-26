@@ -1,0 +1,161 @@
+package tr.ovayuva.ovayuvam.ui
+
+import android.app.Activity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import tr.ovayuva.ovayuvam.BuildConfig
+import tr.ovayuva.ovayuvam.R
+import tr.ovayuva.ovayuvam.map.FogAppearance
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WorldSettings(tracking: Boolean, trackingEnabled: Boolean, onTrackingChange: (Boolean) -> Unit,
+    showHeat: Boolean, onHeatChange: (Boolean) -> Unit, weekly: Boolean, onWeeklyChange: (Boolean) -> Unit,
+    fog: Float, onFogChange: (Float) -> Unit, onReplay: () -> Unit, onExport: () -> Unit,
+    onImport: () -> Unit, onDismiss: () -> Unit) {
+    var privacy by remember { mutableStateOf(false) }
+    var language by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    if (privacy) PrivacyDialog { privacy = false }
+    if (language) LanguageDialog { language = false }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.settings), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, stringResource(R.string.close)) }
+            }
+            SettingSwitch(R.string.tracking, trackingEnabled, onTrackingChange)
+            Text(stringResource(if (tracking) R.string.tracking_active else if (trackingEnabled) R.string.tracking_waiting else R.string.tracking_paused),
+                style = MaterialTheme.typography.bodySmall)
+            if (trackingEnabled && !tracking) SettingsAction(Icons.Default.MyLocation, stringResource(R.string.location_settings)) {
+                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.parse("package:" + context.packageName)))
+            }
+            SettingsAction(Icons.Default.Replay, stringResource(R.string.watch_growth), onReplay)
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Text(stringResource(R.string.map_appearance), style = MaterialTheme.typography.titleMedium)
+            Row {
+                Text(stringResource(R.string.fog_opacity), Modifier.weight(1f))
+                Text(stringResource(R.string.percent, (fog * 100).toInt()))
+            }
+            val fogLabel = stringResource(R.string.fog_opacity)
+            Slider(value = fog, onValueChange = onFogChange, modifier = Modifier.semantics { contentDescription = fogLabel },
+                valueRange = FogAppearance.MinimumOpacity..FogAppearance.MaximumOpacity)
+            SettingSwitch(R.string.visit_colors, showHeat, onHeatChange)
+            SettingSwitch(R.string.weekly_exploration, weekly, onWeeklyChange)
+            Text(stringResource(R.string.weekly_details), style = MaterialTheme.typography.bodySmall)
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Text(stringResource(R.string.your_world), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.backup_details), style = MaterialTheme.typography.bodySmall)
+            SettingsAction(Icons.Default.FileUpload, stringResource(R.string.export_world), onExport)
+            SettingsAction(Icons.Default.FileDownload, stringResource(R.string.import_world), onImport)
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            val selected = AppLanguage.choices[AppLanguage.selected(context)] ?: stringResource(R.string.system_language)
+            SettingsAction(Icons.Default.Language, stringResource(R.string.language) + ": " + selected) { language = true }
+            SettingsAction(Icons.Default.PrivacyTip, stringResource(R.string.privacy), { privacy = true })
+            Text(stringResource(R.string.version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun SettingSwitch(label: Int, checked: Boolean, onChange: (Boolean) -> Unit) {
+    val text = stringResource(label)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, Modifier.weight(1f).padding(end = 16.dp))
+        Switch(checked, onChange, modifier = Modifier.semantics { contentDescription = text })
+    }
+}
+
+@Composable
+private fun SettingsAction(icon: ImageVector, label: String, action: () -> Unit) {
+    TextButton(onClick = action, modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp)) {
+        Icon(icon, null, Modifier.size(24.dp))
+        Text(label, Modifier.weight(1f).padding(start = 16.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+    }
+}
+
+@Composable
+fun LanguageDialog(onDismiss: () -> Unit) {
+    val activity = LocalContext.current as? Activity
+    AlertDialog(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text(stringResource(R.string.language)) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+            (linkedMapOf("" to stringResource(R.string.system_language)) + AppLanguage.choices).forEach { (code, label) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = activity?.let { AppLanguage.selected(it) } == code,
+                        onClick = { onDismiss(); activity?.let { AppLanguage.choose(it, code) } })
+                    TextButton(onClick = { onDismiss(); activity?.let { AppLanguage.choose(it, code) } }) { Text(label) }
+                }
+            }
+        } }, confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } })
+}
+
+@Composable
+fun TrackingWelcome(onContinue: () -> Unit, onNotNow: () -> Unit) {
+    var privacy by remember { mutableStateOf(false) }
+    var language by remember { mutableStateOf(false) }
+    if (privacy) PrivacyDialog { privacy = false }
+    if (language) LanguageDialog { language = false }
+    Surface(Modifier.fillMaxSize()) {
+        Column(Modifier.safeDrawingPadding().verticalScroll(rememberScrollState()).padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Image(painterResource(R.drawable.launcher_map_foreground), null, Modifier.size(76.dp),
+                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(MaterialTheme.colorScheme.primary))
+                IconButton(onClick = { language = true }) { Icon(Icons.Default.Language, stringResource(R.string.language)) }
+            }
+            Text(stringResource(R.string.welcome), style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(R.string.tracking_disclosure), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.disclosure_privacy), style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = { privacy = true }) { Text(stringResource(R.string.privacy)) }
+            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.continue_label)) }
+            TextButton(onClick = onNotNow, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.not_now)) }
+        }
+    }
+}
+
+@Composable
+fun PrivacyDialog(onDismiss: () -> Unit) {
+    val uri = LocalUriHandler.current
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize().safeDrawingPadding()) {
+            Column(Modifier.padding(24.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.privacy), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, stringResource(R.string.close)) }
+                }
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                    Text(stringResource(R.string.privacy_local))
+                    Text(stringResource(R.string.privacy_map))
+                    Text(stringResource(R.string.privacy_backup))
+                    Text(stringResource(R.string.privacy_control))
+                    Text(stringResource(R.string.safety))
+                    Text(stringResource(R.string.operator))
+                    TextButton(onClick = { uri.openUri("https://ovayuva.tr/yuvam/privacy/") }) { Text(stringResource(R.string.full_privacy)) }
+                }
+            }
+        }
+    }
+}

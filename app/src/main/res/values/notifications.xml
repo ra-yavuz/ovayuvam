@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="notification_everyday">
+        <item>"A little map, a whole world."</item>
+        <item>"Your corner of the world, drawn one day at a time."</item>
+        <item>"A few footsteps can make a lovely little line."</item>
+        <item>"There is room on this map for ordinary days."</item>
+        <item>"Your world does not have a deadline."</item>
+        <item>"A familiar street can still be a lovely street."</item>
+        <item>"Little by little, the blank spaces become stories."</item>
+        <item>"Some adventures fit between home and the bakery."</item>
+        <item>"Your map is a scrapbook without the glue."</item>
+        <item>"A small world can hold a lot of memories."</item>
+        <item>"Every map begins somewhere."</item>
+        <item>"No finish line. Just your own little world."</item>
+        <item>"The fog can wait. Enjoy the day."</item>
+        <item>"There is no wrong size for an adventure."</item>
+        <item>"A familiar corner, a different sky."</item>
+        <item>"Your map has room for the scenic route."</item>
+        <item>"Some of the best places are quite ordinary."</item>
+        <item>"A little curiosity goes a long way."</item>
+        <item>"Your world. No audience needed."</item>
+        <item>"The best pace is your own."</item>
+        <item>"A pocket-sized collection of places."</item>
+        <item>"Big maps are made of little moments."</item>
+        <item>"Even the everyday routes belong in your story."</item>
+        <item>"A map does not need to be finished to be beautiful."</item>
+        <item>"There is a whole world in the little things."</item>
+        <item>"The map can stay in your pocket for a while."</item>
+        <item>"No score to chase. Just places to remember."</item>
+        <item>"A little ink for the places that become yours."</item>
+        <item>"Some days are for exploring. Some are for tea."</item>
+        <item>"Your world has plenty of room to grow."</item>
+        <item>"A familiar path is a story worth keeping."</item>
+        <item>"Small outings count as outings."</item>
+        <item>"A quiet corner can be a fine discovery."</item>
+        <item>"The world is full of little in-between places."</item>
+        <item>"Your map is allowed to take its time."</item>
+        <item>"A little collection of here and there."</item>
+        <item>"Not every adventure needs a destination."</item>
+        <item>"There is something lovely about knowing a place."</item>
+        <item>"One map. All your everyday little journeys."</item>
+        <item>"The fog is patient."</item>
+        <item>"Your world is not a competition."</item>
+        <item>"The long way and the short way both belong."</item>
+        <item>"A small excuse to notice your surroundings."</item>
+        <item>"A map full of places, not obligations."</item>
+        <item>"A pocket atlas of your own making."</item>
+        <item>"Somewhere becomes familiar, little by little."</item>
+        <item>"No hurry. The streets will still be there."</item>
+        <item>"Your own little patchwork of places."</item>
+        <item>"There is room for both routine and surprise."</item>
+        <item>"Even a tiny map is entirely yours."</item>
+        <item>"A little more here, a little more there."</item>
+        <item>"Ordinary places make a wonderfully personal map."</item>
+        <item>"Wherever the day takes you, go gently."</item>
+    </string-array>
+    <string-array name="notification_progress">
+        <item>"A few more footsteps in your little atlas."</item>
+        <item>"Your everyday journey has a place on the map."</item>
+        <item>"A little outing, a little story."</item>
+        <item>"Your world has a few more moments in it."</item>
+        <item>"Small steps make a lovely map."</item>
+        <item>"A bit of today, tucked into your world."</item>
+        <item>"Your map is collecting the ordinary magic."</item>
+        <item>"A little journey worth keeping."</item>
+        <item>"A few footsteps, entirely your own."</item>
+        <item>"A little chapter in your pocket atlas."</item>
+        <item>"Your familiar places have company today."</item>
+        <item>"A small trail through a very big world."</item>
+        <item>"A little more of your day belongs on the map."</item>
+        <item>"Your world is made of days like this."</item>
+        <item>"A few places, a few steps, a little story."</item>
+        <item>"Some journeys are small enough to fit into a lunch break."</item>
+        <item>"A little piece of the day, remembered."</item>
+    </string-array>
+    <string-array name="notification_quiet">
+        <item>"Your world is right here whenever you return."</item>
+        <item>"No catching up needed. Your map is still yours."</item>
+        <item>"A quiet day is a perfectly good day."</item>
+        <item>"The fog can wait for another day."</item>
+        <item>"No lost streaks. No rush. Just your world."</item>
+        <item>"Your discoveries are staying right where you left them."</item>
+        <item>"Your little atlas keeps its pages."</item>
+        <item>"Rest belongs in a good adventure, too."</item>
+        <item>"There will be time for another little outing."</item>
+        <item>"Your map has no attendance sheet."</item>
+        <item>"All your places are still here."</item>
+        <item>"A pause does not undo a journey."</item>
+        <item>"A little world, ready whenever you are."</item>
+    </string-array>
+</resources>
